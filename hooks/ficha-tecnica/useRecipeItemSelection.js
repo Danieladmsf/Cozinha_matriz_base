@@ -12,6 +12,8 @@ export function useRecipeItemSelection({
     toast,
     pendingPreparationRef,
     currentPrepIndexForIngredient,
+    currentIngredientIndexForEdit,
+    setCurrentIngredientIndexForEdit,
     currentPrepIndexForPackaging,
     currentPrepIndexForRecipe,
     currentPrepIndexForAssembly,
@@ -141,6 +143,52 @@ export function useRecipeItemSelection({
         const prepIndex = currentPrepIndexForIngredient ?? currentPrepIndexForPackaging;
 
         if (prepIndex !== null) {
+            // == BLOCO DE EDIT/SUBSTITUIÇÃO (NOVO) ==
+            if (currentIngredientIndexForEdit !== null && selectedItems.length > 0) {
+                const newIngData = selectedItems[0]; // Só pega o 1o item para substituição
+                
+                setPreparationsData(prev => {
+                    const newPreparations = [...prev];
+                    if (newPreparations[prepIndex]) {
+                        const updatedIngredients = [...(newPreparations[prepIndex].ingredients || [])];
+                        const existingIng = updatedIngredients[currentIngredientIndexForEdit];
+                        
+                        if (existingIng) {
+                            updatedIngredients[currentIngredientIndexForEdit] = {
+                                ...existingIng, // Mantém os pesos e campos numéricos e IDs internos
+                                id: `${newIngData.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                ingredient_id: newIngData.id,
+                                name: newIngData.name,
+                                current_price: String(newIngData.current_price || '').replace('.', ','),
+                                technical_data: {
+                                    thawing_loss_pct: newIngData.technical_data?.thawing_loss_pct || 0,
+                                    cleaning_loss_pct: newIngData.technical_data?.cleaning_loss_pct || 0,
+                                    cooking_loss_pct: newIngData.technical_data?.cooking_loss_pct || 0,
+                                    cleaning_time_per_kg: newIngData.technical_data?.cleaning_time_per_kg || 0
+                                }
+                            };
+                            newPreparations[prepIndex] = {
+                                ...newPreparations[prepIndex],
+                                ingredients: updatedIngredients
+                            };
+                        }
+                    }
+                    return newPreparations;
+                });
+                
+                setIsDirty(true);
+                setCurrentIngredientIndexForEdit(null);
+                
+                toast({
+                    title: "Ingrediente Substituído",
+                    description: `O ingrediente foi substituído por "${newIngData.name}".`
+                });
+
+                handleCloseIngredientModal();
+                return;
+            }
+            // == FIM DA EDIÇÃO ==
+
             let addedCount = 0;
             selectedItems.forEach(item => {
                 // State updater inside addIngredientToState is safe for multiple sync calls.
@@ -164,7 +212,12 @@ export function useRecipeItemSelection({
         toast,
         handleCloseIngredientModal,
         handleClosePackagingModal,
+        handleClosePackagingModal,
         currentPrepIndexForIngredient,
+        currentIngredientIndexForEdit,
+        setCurrentIngredientIndexForEdit,
+        setIsDirty,
+        setPreparationsData,
         currentPrepIndexForPackaging,
         addIngredientToState
     ]);

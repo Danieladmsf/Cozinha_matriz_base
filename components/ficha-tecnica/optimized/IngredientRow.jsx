@@ -22,28 +22,11 @@ const IngredientRow = ({
   onUpdateIngredient,
   onRemoveIngredient,
   readOnly = false,
+  onOpenIngredientModal,
 }) => {
   const processes = prep.processes || [];
   const hasProcess = (processName) => processes.includes(processName);
 
-  // State for Note Popover
-  const [isNoteOpen, setIsNoteOpen] = React.useState(false);
-  const [noteText, setNoteText] = React.useState(ingredient.usage_note || '');
-
-  // Update local state when prop changes
-  React.useEffect(() => {
-    setNoteText(ingredient.usage_note || '');
-  }, [ingredient.usage_note]);
-
-  const handleSaveNote = () => {
-    if (typeof onUpdateIngredient !== 'function') {
-      console.error('❌ [IngredientRow] onUpdateIngredient is NOT a function!', onUpdateIngredient);
-      return;
-    }
-
-    onUpdateIngredient(prepIndex, ingredientIndex, 'usage_note', noteText);
-    setIsNoteOpen(false);
-  };
 
   const parseNumericValue = (value) => {
     if (!value) return 0;
@@ -427,40 +410,7 @@ const IngredientRow = ({
 
       <TableCell className="px-4 py-2">
         <div className="flex gap-1 justify-end items-center">
-          {/* NOTE BUTTON - ALWAYS VISIBLE */}
-          <Popover open={isNoteOpen} onOpenChange={setIsNoteOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-7 w-7 rounded-full ${ingredient.usage_note ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'hover:bg-amber-50 text-gray-400 hover:text-amber-500'}`}
-                title="Adicionar observação de uso"
-              >
-                <StickyNote className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" align="end">
-              <div className="space-y-3">
-                <h4 className="font-medium text-sm text-gray-900 flex items-center gap-2">
-                  <StickyNote className="h-4 w-4 text-amber-500" />
-                  Observação de Uso
-                </h4>
-                <p className="text-xs text-gray-500">
-                  Adicione uma nota específica sobre como este ingrediente é usado nesta receita.
-                </p>
-                <Textarea
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Ex: Cortar em cubos de 2cm..."
-                  className="min-h-[80px] text-sm resize-none focus-visible:ring-amber-500"
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setIsNoteOpen(false)}>Cancelar</Button>
-                  <Button size="sm" onClick={handleSaveNote} className="bg-amber-600 hover:bg-amber-700 text-white">Salvar Nota</Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+
 
           {!readOnly && (
             <>
@@ -469,6 +419,7 @@ const IngredientRow = ({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 rounded-full hover:bg-blue-50"
+                  onClick={() => onOpenIngredientModal && onOpenIngredientModal(prepIndex, ingredientIndex)}
                   title="Editar ingrediente"
                 >
                   <Edit className="h-3 w-3 text-blue-500" />

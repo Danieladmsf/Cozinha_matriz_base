@@ -497,6 +497,7 @@ export default function RecipeTechnical() {
   // Estados para modal de ingredientes
   const [ingredientModalOpen, setIngredientModalOpen] = useState(false);
   const [currentPrepIndexForIngredient, setCurrentPrepIndexForIngredient] = useState(null);
+  const [currentIngredientIndexForEdit, setCurrentIngredientIndexForEdit] = useState(null); // NOVO
 
   // Estados para modal de embalagens (Packaging)
   const [packagingModalOpen, setPackagingModalOpen] = useState(false);
@@ -764,8 +765,9 @@ export default function RecipeTechnical() {
     setPackagingModalOpen
   });
   // ==== HANDLERS DE INGREDIENTES ====
-  const handleOpenIngredientModal = (prepIndex) => {
+  const handleOpenIngredientModal = (prepIndex, ingredientIndex = null) => {
     setCurrentPrepIndexForIngredient(prepIndex);
+    setCurrentIngredientIndexForEdit(ingredientIndex);
     setIngredientModalOpen(true);
     clearIngredientSearch();
   };
@@ -777,6 +779,7 @@ export default function RecipeTechnical() {
     }
     setIngredientModalOpen(false);
     setCurrentPrepIndexForIngredient(null);
+    setCurrentIngredientIndexForEdit(null);
     clearIngredientSearch();
   };
 
@@ -830,6 +833,8 @@ export default function RecipeTechnical() {
     toast,
     pendingPreparationRef,
     currentPrepIndexForIngredient,
+    currentIngredientIndexForEdit,
+    setCurrentIngredientIndexForEdit,
     currentPrepIndexForPackaging,
     currentPrepIndexForRecipe,
     currentPrepIndexForAssembly,

@@ -513,7 +513,6 @@ const IngredientTable = ({
               </TableHeader>
 
               <TableBody>
-                {/* Renderizar Ingredientes da Seção */}
                 {section.items.map((item) => (
                   <IngredientRow
                     key={`ingredient-${item.data.id || item.originalIndex}`}
@@ -522,6 +521,7 @@ const IngredientTable = ({
                     ingredientIndex={item.originalIndex}
                     prep={prep}
                     readOnly={isReadOnly || item.data.locked}
+                    onOpenIngredientModal={onOpenIngredientModal}
                     {...rest}
                   />
                 ))}

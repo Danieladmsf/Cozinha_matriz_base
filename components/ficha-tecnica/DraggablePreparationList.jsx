@@ -752,7 +752,7 @@ const DraggablePreparationList = ({
 
                                                                                             {note.content && (
                                                                                                 <div
-                                                                                                    className="text-amber-800 text-xs whitespace-pre-wrap prose prose-sm max-w-none [&_p]:m-0 [&_p]:inline"
+                                                                                                    className="text-amber-800 text-sm whitespace-pre-wrap prose prose-sm max-w-none [&_p]:m-0"
                                                                                                     dangerouslySetInnerHTML={{ __html: note.content }}
                                                                                                 />
                                                                                             )}
