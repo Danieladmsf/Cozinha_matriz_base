@@ -19,22 +19,35 @@ export function useRecipeCategorization({
             const data = await CategoryTree.list();
             setAllCategories(data); // Populate allCategories for the filter menu
 
+            // Normalização canônica — garante compatibilidade com cache e dados antigos
+            const normalizeType = (t) => {
+                const raw = (t || '').toLowerCase().trim();
+                const aliases = {
+                    'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+                    'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+                    'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+                };
+                return aliases[raw] || raw || 'receitas';
+            };
+
             // Filtrar categorias baseado nos CategoryTypes selecionados nas configurações
             // Se não houver seleção, mostrar todas. Se houver, filtrar pelo 'type' da categoria
             let recipeCats = data.filter(cat => cat.active !== false);
 
             if (currentFilters && currentFilters.length > 0) {
-                recipeCats = recipeCats.filter(cat => currentFilters.includes(cat.type));
+                // Normalizar filtros salvos (podem estar em formato antigo como 'recipe')
+                const normalizedFilters = currentFilters.map(f => normalizeType(f));
+                recipeCats = recipeCats.filter(cat => normalizedFilters.includes(normalizeType(cat.type)));
             }
 
             const roots = recipeCats
                 .filter(c => c.level === 1)
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-            // 1. Agrupar Roots por Tipo
+            // 1. Agrupar Roots por Tipo (com normalização canônica)
             const rootsByType = {};
             roots.forEach(root => {
-                const type = root.type || 'receitas';
+                const type = normalizeType(root.type);
                 if (!rootsByType[type]) rootsByType[type] = [];
                 rootsByType[type].push(root);
             });

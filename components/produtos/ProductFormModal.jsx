@@ -47,7 +47,7 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
     const addComponent = () => {
         setFormData(prev => ({
             ...prev,
-            components: [...prev.components, { recipe_id: '', weight_kg: 0 }]
+            components: [...prev.components, { recipe_id: '', weight_kg: 1 }]
         }));
     };
 
@@ -126,7 +126,10 @@ export default function ProductFormModal({ isOpen, onClose, onSave, editingProdu
                             >
                                 <option value="">Sem Categoria</option>
                                 {fullCategoryTree
-                                    .filter(c => c.type === 'produtos' && c.level === 1)
+                                    .filter(c => {
+                                        const t = (c.type || '').toLowerCase();
+                                        return (t === 'produtos' || t === 'product' || t === 'products') && c.level === 1;
+                                    })
                                     .sort((a, b) => (a.order || 0) - (b.order || 0))
                                     .map(cat => (
                                         <option key={cat.id} value={cat.name}>{cat.name}</option>

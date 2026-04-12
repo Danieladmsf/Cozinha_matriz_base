@@ -79,7 +79,7 @@ const ProcessCreatorModalComponent = ({
       ingredients: [],
       instructions: "",
       assembly_config: selectedProcesses.includes('assembly') ? {
-        container_type: 'cuba',
+        container_type: 'unidade',
         total_weight: '',
         units_quantity: '1',
         notes: ''
@@ -402,7 +402,7 @@ const ProcessCreatorModalComponent = ({
       sub_components: initialSubComponents, // JA INICIA COM OS ITENS
       instructions: "",
       assembly_config: {
-        container_type: 'cuba',
+        container_type: 'unidade',
         total_weight: '',
         units_quantity: '1',
         notes: ''

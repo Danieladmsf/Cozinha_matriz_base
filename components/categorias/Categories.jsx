@@ -491,8 +491,21 @@ export default function Categories() {
   };
 
   const getRootCategories = (type) => {
+    // Normalização canônica para compatibilidade com as tabs (que usam valores em inglês como 'ingredient')
+    const normalizeType = (t) => {
+      const raw = (t || '').toLowerCase().trim();
+      const aliases = {
+        'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+        'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+        'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+      };
+      return aliases[raw] || raw || 'receitas';
+    };
+
+    const targetType = normalizeType(type);
+
     return categoryTree
-      .filter(cat => cat.type === type && cat.level === 1)
+      .filter(cat => normalizeType(cat.type) === targetType && cat.level === 1)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 

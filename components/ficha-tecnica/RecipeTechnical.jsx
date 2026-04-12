@@ -522,12 +522,24 @@ export default function RecipeTechnical() {
   const handleCategoryChange = (value) => {
     handleSelectChange(setRecipeData, 'category', value);
 
+    // Normalização canônica de tipos
+    const normalizeType = (t) => {
+      const raw = (t || '').toLowerCase().trim();
+      const aliases = {
+        'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+        'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+        'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+      };
+      return aliases[raw] || raw || 'receitas';
+    };
+
     // Auto-detect type based on category
     const selectedCat = allCategoryTreeItems?.find(c => c.name === value) || window.CategoryTree?.list()?.find?.(c => c.name === value);
     if (selectedCat) {
       handleSelectChange(setRecipeData, 'category_id', selectedCat.id);
-      if (selectedCat.type && selectedCat.type !== recipeData.type) {
-        handleSelectChange(setRecipeData, 'type', selectedCat.type);
+      const normalizedType = normalizeType(selectedCat.type);
+      if (normalizedType !== recipeData.type) {
+        handleSelectChange(setRecipeData, 'type', normalizedType);
       }
     }
 
@@ -734,7 +746,7 @@ export default function RecipeTechnical() {
       sub_components: [],
       instructions: "",
       assembly_config: selectedProcesses.includes('assembly') ? {
-        container_type: 'cuba',
+        container_type: 'unidade',
         total_weight: '',
         units_quantity: '1',
         notes: ''

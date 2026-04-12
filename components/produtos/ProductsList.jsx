@@ -176,9 +176,9 @@ export default function ProductsList() {
                         };
                         const newRecipe = await Recipe.create(recipeData);
 
-                        // Vincular produto à receita
+                        // Vincular produto à receita com peso 1 (1:1 padrão) para evitar custo zero
                         await updateProduct(newProduct.id, {
-                            components: [{ recipe_id: newRecipe.id, weight_kg: 0 }],
+                            components: [{ recipe_id: newRecipe.id, weight_kg: 1 }],
                             recipe_link_id: newRecipe.id
                         });
                     } catch (recipeErr) {
@@ -505,9 +505,9 @@ export default function ProductsList() {
                                                                             source_product_id: product.id
                                                                         });
                                                                         recipeId = newRecipe.id;
-                                                                        // Vincular ao produto
+                                                                        // Vincular ao produto com peso 1
                                                                         await updateProduct(product.id, {
-                                                                            components: [{ recipe_id: recipeId, weight_kg: 0 }]
+                                                                            components: [{ recipe_id: recipeId, weight_kg: 1 }]
                                                                         });
                                                                     } catch (e) {
                                                                         alert("Erro ao criar ficha técnica: " + e.message);
@@ -537,7 +537,7 @@ export default function ProductsList() {
                                                                         });
                                                                         recipeId = newRecipe.id;
                                                                         await updateProduct(product.id, {
-                                                                            components: [{ recipe_id: recipeId, weight_kg: 0 }]
+                                                                            components: [{ recipe_id: recipeId, weight_kg: 1 }]
                                                                         });
                                                                     } catch (e) {
                                                                         alert("Erro ao criar ficha técnica: " + e.message);
