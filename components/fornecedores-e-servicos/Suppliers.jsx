@@ -56,41 +56,15 @@ export default function Suppliers() {
   const [currentSupplier, setCurrentSupplier] = useState(null);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState("");
   const [cnpj, setCnpj] = useState("");
+  const [companyName, setCompanyName] = useState("");
 
-  // Estados para as categorias
-  const [categoryTypes, setCategoryTypes] = useState([]);
-  const [selectedCategoryType, setSelectedCategoryType] = useState("");
-  const [categoriesByType, setCategoriesByType] = useState({});
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [filteredSubcategories, setFilteredSubcategories] = useState([]);
-  const [allCategories, setAllCategories] = useState([]);
+
 
   useEffect(() => {
     loadSuppliers();
-    loadCategoryTypes();
-    loadCategoryTree();
   }, []);
 
-  // Filtrar categorias quando o tipo de categoria muda
-  useEffect(() => {
-    if (selectedCategoryType && categoriesByType[selectedCategoryType]) {
-      // Resetar a categoria e subcategoria selecionadas quando mudar o tipo
-      setSelectedCategory("");
-      setFilteredSubcategories([]);
-    }
-  }, [selectedCategoryType, categoriesByType]);
 
-  // Filtrar subcategorias quando a categoria muda
-  useEffect(() => {
-    if (selectedCategory) {
-      const subs = allCategories.filter(cat =>
-        cat.parent_id === selectedCategory && cat.level === 2
-      );
-      setFilteredSubcategories(subs);
-    } else {
-      setFilteredSubcategories([]);
-    }
-  }, [selectedCategory, allCategories]);
 
   const loadSuppliers = async () => {
     try {
@@ -103,57 +77,35 @@ export default function Suppliers() {
     }
   };
 
-  const loadCategoryTypes = async () => {
-    try {
-      const types = await CategoryType.list();
-      types.sort((a, b) => (a.order || 99) - (b.order || 99));
-      setCategoryTypes(types);
 
-      // Se tiver tipos, seleciona o primeiro por padrão
-      if (types.length > 0) {
-        setSelectedCategoryType(types[0].value);
-      }
-    } catch (error) {
-    }
-  };
 
-  const loadCategoryTree = async () => {
-    try {
-      const categoryData = await CategoryTree.list();
-      setAllCategories(categoryData);
-
-      // Organizar categorias por tipo
-      const categoriesByTypeObj = {};
-
-      // Agrupar todas as categorias de nível 1 por seu tipo
-      categoryData
-        .filter(cat => cat.level === 1)
-        .forEach(cat => {
-          if (!categoriesByTypeObj[cat.type]) {
-            categoriesByTypeObj[cat.type] = [];
-          }
-          categoriesByTypeObj[cat.type].push(cat);
-        });
-
-      setCategoriesByType(categoriesByTypeObj);
-    } catch (error) {
-    }
-  };
-
-  // Função para gerar código único de fornecedor
+  // Função para gerar código único de fornecedor garantindo sequencial global
   const generateSupplierCode = (companyName, existingCodes = []) => {
     if (!companyName) return '';
 
-    // Gerar prefixo com as 3 primeiras letras (ou menos se o nome for curto)
+    // Remove caracteres especiais, pega 3 primeiras letras
     const prefix = companyName
-      .replace(/[^a-zA-Z0-9]/g, '') // Remove caracteres especiais
+      .replace(/[^a-zA-Z0-9]/g, '')
       .toUpperCase()
       .slice(0, 3);
 
-    // Encontrar o próximo número sequencial para este prefixo
-    let counter = 1;
+    // Encontra o maior número usado em TODO o sistema
+    let maxGlobalNumber = 0;
+    existingCodes.forEach(code => {
+      // Extrai apenas os números da string (ex: 'MEG004' -> 4)
+      const numMatch = code.match(/\d+/);
+      if (numMatch) {
+        const num = parseInt(numMatch[0], 10);
+        if (num > maxGlobalNumber) {
+          maxGlobalNumber = num;
+        }
+      }
+    });
+
+    let counter = maxGlobalNumber + 1;
     let newCode = `${prefix}${String(counter).padStart(3, '0')}`;
 
+    // Segurança contra duplicatas exatas raras
     while (existingCodes.includes(newCode)) {
       counter++;
       newCode = `${prefix}${String(counter).padStart(3, '0')}`;
@@ -307,21 +259,6 @@ export default function Suppliers() {
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    // Obter valores dos campos
-    const categoryId = formData.get("category");
-    const subcategoryId = formData.get("subcategory");
-
-    // Determinar a categoria a ser usada: subcategoria se selecionada, ou categoria principal
-    let selectedCategoryName = "";
-
-    if (subcategoryId) {
-      const selectedSubcat = allCategories.find(sub => sub.id === subcategoryId);
-      selectedCategoryName = selectedSubcat ? selectedSubcat.name : "";
-    } else if (categoryId) {
-      const selectedCat = allCategories.find(cat => cat.id === categoryId);
-      selectedCategoryName = selectedCat ? selectedCat.name : "";
-    }
-
     const data = {
       company_name: formData.get("company_name"),
       cnpj: cnpj, // Usar o estado formatado
@@ -333,8 +270,7 @@ export default function Suppliers() {
       vendor_phone: formData.get("vendor_phone"),
       address: formData.get("address"),
       email: formData.get("email"),
-      category: selectedCategoryName,
-      active: formData.get("active") === "true",
+      active: true,
       notes: formData.get("notes"),
       vendor_photo: uploadedPhotoUrl || currentSupplier?.vendor_photo || ""
     };
@@ -351,45 +287,19 @@ export default function Suppliers() {
       setCurrentSupplier(null);
       setUploadedPhotoUrl("");
       setCnpj(""); // Limpar CNPJ
-      resetCategorySelections();
+      setCompanyName("");
     } catch (error) {
     }
   };
 
-  const resetCategorySelections = () => {
-    setSelectedCategoryType("");
-    setSelectedCategory("");
-    setFilteredSubcategories([]);
-  };
+
 
   const openEditDialog = (supplier) => {
     setCurrentSupplier(supplier);
     setUploadedPhotoUrl(supplier.vendor_photo || "");
     setCnpj(supplier.cnpj || ""); // Definir CNPJ formatado
 
-    // Tenta encontrar a categoria ou subcategoria do fornecedor
-    const matchingCategory = allCategories.find(cat => cat.name === supplier.category);
 
-    if (matchingCategory) {
-      // Se for uma subcategoria (nível 2)
-      if (matchingCategory.level === 2 && matchingCategory.parent_id) {
-        const parentCategory = allCategories.find(cat => cat.id === matchingCategory.parent_id);
-        if (parentCategory) {
-          // Primeiro configura o tipo de categoria
-          setSelectedCategoryType(parentCategory.type);
-          // Depois a categoria pai
-          setSelectedCategory(parentCategory.id);
-          // As subcategorias serão filtradas pelo useEffect
-        }
-      }
-      // Se for uma categoria de nível 1
-      else if (matchingCategory.level === 1) {
-        setSelectedCategoryType(matchingCategory.type);
-        setSelectedCategory(matchingCategory.id);
-      }
-    } else {
-      resetCategorySelections();
-    }
 
     setIsDialogOpen(true);
   };
@@ -425,7 +335,6 @@ export default function Suppliers() {
               setCurrentSupplier(null);
               setUploadedPhotoUrl("");
               setCnpj(""); // Limpar CNPJ
-              resetCategorySelections();
               setIsDialogOpen(true);
             }}
             className="bg-blue-600 hover:bg-blue-700"
@@ -531,7 +440,7 @@ export default function Suppliers() {
           setCurrentSupplier(null);
           setUploadedPhotoUrl("");
           setCnpj("");
-          resetCategorySelections();
+          setCompanyName("");
         }
         setIsDialogOpen(open);
       }}>
@@ -586,6 +495,7 @@ export default function Suppliers() {
                       id="company_name"
                       name="company_name"
                       defaultValue={currentSupplier?.company_name}
+                      onChange={(e) => setCompanyName(e.target.value)}
                       required
                     />
                   </div>
@@ -598,8 +508,9 @@ export default function Suppliers() {
                     <Input
                       id="supplier_code"
                       name="supplier_code"
-                      defaultValue={currentSupplier?.supplier_code}
-                      placeholder="Ex: 001, ABC123"
+                      value={currentSupplier?.supplier_code || generateSupplierCode(companyName, suppliers.map(s => s.supplier_code).filter(Boolean))}
+                      readOnly
+                      className="bg-gray-50 text-gray-500 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -616,6 +527,19 @@ export default function Suppliers() {
                       value={cnpj}
                       onChange={handleCnpjChange}
                       placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="email" className="text-sm font-medium flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      Email
+                    </label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      defaultValue={currentSupplier?.email}
                     />
                   </div>
                 </div>
@@ -644,100 +568,7 @@ export default function Suppliers() {
                       defaultValue={currentSupplier?.vendor_phone}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label htmlFor="email" className="text-sm font-medium flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      Email
-                    </label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      defaultValue={currentSupplier?.email}
-                    />
-                  </div>
-
-                  {/* Dropdown 1: Tipos de Categoria (abas) */}
-                  <div className="space-y-1">
-                    <label htmlFor="category_type" className="text-sm font-medium">
-                      Tipo de Categoria
-                    </label>
-                    <Select
-                      id="category_type"
-                      name="category_type"
-                      value={selectedCategoryType}
-                      onValueChange={setSelectedCategoryType}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryTypes.length > 0 ? (
-                          categoryTypes.map(type => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="ingredient">Ingredientes</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Categorias de acordo com o tipo selecionado */}
-                {selectedCategoryType && categoriesByType[selectedCategoryType] && (
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Dropdown 2: Categorias do tipo selecionado */}
-                    <div className="space-y-1">
-                      <label htmlFor="category" className="text-sm font-medium">
-                        Categoria
-                      </label>
-                      <Select
-                        id="category"
-                        name="category"
-                        value={selectedCategory}
-                        onValueChange={setSelectedCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoriesByType[selectedCategoryType].map(category => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Dropdown 3: Subcategorias da categoria selecionada */}
-                    {selectedCategory && filteredSubcategories.length > 0 && (
-                      <div className="space-y-1">
-                        <label htmlFor="subcategory" className="text-sm font-medium">
-                          Subcategoria
-                        </label>
-                        <Select name="subcategory">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione (opcional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {filteredSubcategories.map(subcat => (
-                              <SelectItem key={subcat.id} value={subcat.id}>
-                                {subcat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="space-y-1">
+                </div>                <div className="space-y-1">
                   <label htmlFor="address" className="text-sm font-medium flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
                     Endereço
@@ -760,17 +591,7 @@ export default function Suppliers() {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="active"
-                    name="active"
-                    defaultChecked={currentSupplier?.active ?? true}
-                    value="true"
-                  />
-                  <label htmlFor="active" className="text-sm font-medium">
-                    Fornecedor ativo
-                  </label>
-                </div>
+
               </div>
             </div>
 
@@ -780,7 +601,6 @@ export default function Suppliers() {
                 setCurrentSupplier(null);
                 setUploadedPhotoUrl("");
                 setCnpj("");
-                resetCategorySelections();
               }}>
                 Cancelar
               </Button>

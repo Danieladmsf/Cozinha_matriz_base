@@ -65,6 +65,55 @@ const IngredientRow = ({
     return String(value); // Mantém como o usuário digitou se for válido e curto
   };
 
+  const handleBlurFormat = (field, value) => {
+    if (!value && value !== 0) return;
+    const num = parseNumericValue(value);
+    if (isNaN(num) || num === 0 && String(value).trim() === '') return;
+
+    // Formata sempre para 3 casas decimais (ex: 1 -> 1,000)
+    const formatted = num.toFixed(3).replace('.', ',');
+
+    if (String(value) !== formatted) {
+      updateIngredientField(field, formatted);
+    }
+
+    // Preenchimento FRONTAL (Frente para trás - "Tab cascade")
+    // SÍNCRONO: para garantir que o React execute junto e o input receba foco já preenchido.
+    const fieldOrder = [
+      'weight_frozen',
+      'weight_thawed',
+      'weight_raw',
+      'weight_clean',
+      'weight_pre_cooking',
+      'weight_cooked',
+      'weight_portioned'
+    ];
+    
+    const currentFieldIndex = fieldOrder.indexOf(field);
+    if (currentFieldIndex >= 0) {
+      for (let i = currentFieldIndex + 1; i < fieldOrder.length; i++) {
+        const nextField = fieldOrder[i];
+        const nextValue = ingredient[nextField];
+
+        let isActiveProcess = false;
+        if (nextField === 'weight_thawed' && hasProcess('defrosting')) isActiveProcess = true;
+        if (nextField === 'weight_raw') isActiveProcess = true;
+        if (nextField === 'weight_clean' && hasProcess('cleaning')) isActiveProcess = true;
+        if (nextField === 'weight_pre_cooking' && hasProcess('cooking')) isActiveProcess = true;
+        if (nextField === 'weight_cooked' && hasProcess('cooking')) isActiveProcess = true;
+        if (nextField === 'weight_portioned' && hasProcess('portioning')) isActiveProcess = true;
+
+        if (isActiveProcess) {
+          if (!nextValue || nextValue === '' || parseNumericValue(nextValue) === 0) {
+            onUpdateIngredient(prepIndex, ingredientIndex, nextField, formatted);
+          }
+          break; // O Tab preenche apenas 1 passo adiante.
+        }
+      }
+    }
+  };
+
+
 
   const calculatedValues = useMemo(() => {
     const calculateLoss = (initial, final) => {
@@ -149,100 +198,17 @@ const IngredientRow = ({
   }, [ingredient, prep.processes]);
 
   const updateIngredientField = (field, value) => {
+    let cleanValue = String(value);
+
+    // Evita o efeito "01" ao digitar se o campo tinha 0 oculto ou estava vazio
+    if (/^0+[1-9]/.test(cleanValue)) {
+      cleanValue = cleanValue.replace(/^0+/, '');
+    } else if (/^0+0[,\.]/.test(cleanValue)) {
+      cleanValue = cleanValue.replace(/^0+(?=0[,\.])/, '');
+    }
+
     // Atualizar o campo principal primeiro
-    onUpdateIngredient(prepIndex, ingredientIndex, field, value);
-
-    // 🎯 AUTO-CALCULO FORWARD (Baseado na Ficha Técnica)
-    const val = parseNumericValue(value);
-    const textData = ingredient.technical_data || {};
-
-    // 1. Descongelamento: Frozen -> Thawed
-    if (field === 'weight_frozen' && hasProcess('defrosting') && textData.thawing_loss_pct) {
-      const loss = parseNumericValue(textData.thawing_loss_pct);
-      const thawed = val * (1 - loss / 100);
-      onUpdateIngredient(prepIndex, ingredientIndex, 'weight_thawed', thawed.toFixed(3).replace('.', ','));
-
-      // Cascata: Thawed -> Clean
-      if (hasProcess('cleaning') && textData.cleaning_loss_pct) {
-        const cleanLoss = parseNumericValue(textData.cleaning_loss_pct);
-        const clean = thawed * (1 - cleanLoss / 100);
-        onUpdateIngredient(prepIndex, ingredientIndex, 'weight_clean', clean.toFixed(3).replace('.', ','));
-
-        // Cascata: Clean -> Cooked
-        if (hasProcess('cooking') && textData.cooking_loss_pct) {
-          const cookLoss = parseNumericValue(textData.cooking_loss_pct);
-          const cooked = clean * (1 - cookLoss / 100);
-          onUpdateIngredient(prepIndex, ingredientIndex, 'weight_cooked', cooked.toFixed(3).replace('.', ','));
-          // Pre-cooking geralmente é igual a clean
-          onUpdateIngredient(prepIndex, ingredientIndex, 'weight_pre_cooking', clean.toFixed(3).replace('.', ','));
-        }
-      }
-    }
-
-    // 2. Limpeza: Raw -> Clean
-    if (field === 'weight_raw' && hasProcess('cleaning') && textData.cleaning_loss_pct) {
-      const loss = parseNumericValue(textData.cleaning_loss_pct);
-      const clean = val * (1 - loss / 100);
-      onUpdateIngredient(prepIndex, ingredientIndex, 'weight_clean', clean.toFixed(3).replace('.', ','));
-
-      // Cascata: Clean -> Cooked
-      if (hasProcess('cooking') && textData.cooking_loss_pct) {
-        const cookLoss = parseNumericValue(textData.cooking_loss_pct);
-        const cooked = clean * (1 - cookLoss / 100);
-        onUpdateIngredient(prepIndex, ingredientIndex, 'weight_cooked', cooked.toFixed(3).replace('.', ','));
-        onUpdateIngredient(prepIndex, ingredientIndex, 'weight_pre_cooking', clean.toFixed(3).replace('.', ','));
-      }
-    }
-
-    // 3. Cocção: Clean/PreCook -> Cooked
-    if ((field === 'weight_clean' || field === 'weight_pre_cooking') && hasProcess('cooking') && textData.cooking_loss_pct) {
-      const loss = parseNumericValue(textData.cooking_loss_pct);
-      const cooked = val * (1 - loss / 100);
-      onUpdateIngredient(prepIndex, ingredientIndex, 'weight_cooked', cooked.toFixed(3).replace('.', ','));
-    }
-
-    // AUTO-PREENCHIMENTO REVERSO (Mantido como fallback para campos vazios)
-    setTimeout(() => {
-      // ... lógica existente ...
-      // Definir a ordem completa dos campos (da esquerda para direita)
-      const fieldOrder = [
-        'weight_frozen',      // Descongelamento - Peso Congelado
-        'weight_thawed',      // Descongelamento - Peso Resfriado
-        'weight_raw',         // Limpeza - Peso Bruto/Entrada
-        'weight_clean',       // Limpeza - Pós Limpeza
-        'weight_pre_cooking', // Cocção - Pré Cocção
-        'weight_cooked',      // Cocção - Pós Cocção
-        'weight_portioned'    // Porcionamento - Pós Porcionamento
-      ];
-
-      // Encontrar o índice do campo atual
-      const currentFieldIndex = fieldOrder.indexOf(field);
-
-      if (currentFieldIndex > 0) {
-        // Preencher todos os campos anteriores (apenas os que fazem parte dos processos ativos)
-        for (let i = currentFieldIndex - 1; i >= 0; i--) {
-          const previousField = fieldOrder[i];
-          const currentValue = ingredient[previousField];
-
-          // Só preencher se estiver vazio (para não sobrescrever o cálculo forward ou manual)
-          if (!currentValue || currentValue === '' || parseNumericValue(currentValue) === 0) {
-            let shouldFill = false;
-
-            if (previousField === 'weight_frozen' && hasProcess('defrosting')) shouldFill = true;
-            if (previousField === 'weight_thawed' && hasProcess('defrosting')) shouldFill = true;
-            if (previousField === 'weight_raw') shouldFill = true;
-            if (previousField === 'weight_clean' && hasProcess('cleaning')) shouldFill = true;
-            if (previousField === 'weight_pre_cooking' && hasProcess('cooking')) shouldFill = true;
-            if (previousField === 'weight_cooked' && hasProcess('cooking')) shouldFill = true;
-            if (previousField === 'weight_portioned' && hasProcess('portioning')) shouldFill = true;
-
-            if (shouldFill) {
-              onUpdateIngredient(prepIndex, ingredientIndex, previousField, value);
-            }
-          }
-        }
-      }
-    }, 50);
+    onUpdateIngredient(prepIndex, ingredientIndex, field, cleanValue);
   };
 
   if (ingredient.is_note_row) {
@@ -292,6 +258,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_frozen)}
               onChange={(e) => updateIngredientField('weight_frozen', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_frozen', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="0,000"
@@ -302,6 +270,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_thawed)}
               onChange={(e) => updateIngredientField('weight_thawed', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_thawed', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="0,000"
@@ -323,6 +293,8 @@ const IngredientRow = ({
                 type="text"
                 value={formatDisplayValue(ingredient.weight_raw)}
                 onChange={(e) => updateIngredientField('weight_raw', e.target.value)}
+                onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
+                onFocus={(e) => e.target.select()}
                 disabled={readOnly || ingredient.locked}
                 className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder={(() => {
@@ -350,6 +322,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_clean)}
               onChange={(e) => updateIngredientField('weight_clean', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_clean', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="0,000"
@@ -370,6 +344,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_pre_cooking)}
               onChange={(e) => updateIngredientField('weight_pre_cooking', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_pre_cooking', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder={(() => {
@@ -387,6 +363,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_cooked)}
               onChange={(e) => updateIngredientField('weight_cooked', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_cooked', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="0,000"
@@ -409,6 +387,8 @@ const IngredientRow = ({
                 type="text"
                 value={formatDisplayValue(ingredient.weight_raw)}
                 onChange={(e) => updateIngredientField('weight_raw', e.target.value)}
+                onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
+                onFocus={(e) => e.target.select()}
                 disabled={readOnly || ingredient.locked}
                 className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="0,000"
@@ -420,6 +400,8 @@ const IngredientRow = ({
               type="text"
               value={formatDisplayValue(ingredient.weight_portioned)}
               onChange={(e) => updateIngredientField('weight_portioned', e.target.value)}
+              onBlur={(e) => handleBlurFormat('weight_portioned', e.target.value)}
+              onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
               className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               placeholder="0,000"

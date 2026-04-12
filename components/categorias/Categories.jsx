@@ -74,58 +74,11 @@ export default function Categories() {
     try {
       const data = await Category.list();
 
-      // Lógica de seeding para projeto "virgem"
-      if (!Array.isArray(data) || data.length === 0) {
-        console.log("🌱 Projeto virgem detectado. Semeando categorias padrão...");
-
-        const defaultCategories = [
-          'Laticínios',
-          'Carnes',
-          'Vegetais',
-          'Frutas',
-          'Grãos',
-          'Temperos',
-          'Massas',
-          'Molhos',
-          'Bebidas',
-          'Outros'
-        ];
-
-        const createdCategories = [];
-
-        // Criar uma por uma para garantir persistência
-        for (const catName of defaultCategories) {
-          try {
-            const newCat = await Category.create({
-              name: catName,
-              type: 'ingredient',
-              active: true,
-              description: 'Categoria padrão do sistema',
-              level: 1,
-              parent_id: null
-            });
-            createdCategories.push(newCat);
-          } catch (e) {
-            console.error(`Erro ao criar categoria padrão ${catName}:`, e);
-          }
-        }
-
-        // Se conseguimos criar, atualizamos o estado com as novas categorias
-        if (createdCategories.length > 0) {
-          setCategories(createdCategories);
-          // Salvar flag no localStorage para evitar re-verificação desnecessária (opcional, mas bom pra performance)
-          localStorage.setItem('system_seeded', 'true');
-          toast({
-            title: "Configuração Inicial",
-            description: "Categorias padrão foram criadas com sucesso.",
-          });
-        } else {
-          setCategories([]);
-        }
-      } else {
+      if (data && Array.isArray(data)) {
         setCategories(data);
+      } else {
+        setCategories([]);
       }
-
     } catch (error) {
       console.error("Erro ao carregar categorias:", error);
       setError("Erro ao carregar categorias. Por favor, tente novamente.");
@@ -148,61 +101,22 @@ export default function Categories() {
     try {
       let typeData = await CategoryType.list();
 
-      // Init array if null
       if (!Array.isArray(typeData)) typeData = [];
-
-      // SEEDING: Ensure default types exist
-      const defaultTypes = [
-        { value: 'ingredientes', label: 'Ingredientes', order: 1, is_system: true },
-        { value: 'receitas', label: 'Receitas', order: 2, is_system: true },
-        { value: 'contas', label: 'Contas', order: 3, is_system: true }
-      ];
-
-      let seeded = false;
-      const existingValues = new Set(typeData.map(t => t.value));
-
-      for (const defType of defaultTypes) {
-        if (!existingValues.has(defType.value)) {
-          // Special case: check if we have the singular version before seeding plural
-          if (defType.value === 'ingredientes' && existingValues.has('ingredient')) {
-            continue; // Don't seed 'ingredientes' if 'ingredient' already exists to avoid duplication if user prefers singular
-          }
-
-          try {
-            console.log(`Seeding missing category type: ${defType.label}`);
-            const newType = await CategoryType.create(defType);
-            if (newType) {
-              typeData.push(newType);
-              seeded = true;
-            }
-          } catch (e) {
-            console.error(`Failed to seed type ${defType.value}:`, e);
-          }
-        }
-      }
 
       if (typeData.length > 0) {
         typeData.sort((a, b) => (a.order || 99) - (b.order || 99));
 
-        // Remove duplicates based on value
-        let uniqueTypes = typeData.filter((type, index, self) =>
+        // Filtra "Contas" para garantir que o cache offline do navegador também esconda
+        const ignoredValues = ['bill', 'contas'];
+        let uniqueTypes = typeData.filter(t => !ignoredValues.includes(t.value));
+
+        // Deduplication based on value just in case
+        uniqueTypes = uniqueTypes.filter((type, index, self) =>
           index === self.findIndex(t => t.value === type.value)
         );
 
-        // CLEANUP: Filter out unwanted/duplicate English keys if they exist
-        const ignoredValues = ['recipe', 'bill'];
-        uniqueTypes = uniqueTypes.filter(t => !ignoredValues.includes(t.value));
-
-        // DEDUPLICATION: Prefer 'ingredientes' if both exist, otherwise keep 'ingredient'
-        // If the user has both, we hide 'ingredient' to avoid visual duplicate
-        const hasPluralIngredients = uniqueTypes.some(t => t.value === 'ingredientes');
-        if (hasPluralIngredients) {
-          uniqueTypes = uniqueTypes.filter(t => t.value !== 'ingredient');
-        }
-
         setCategoryTypes(uniqueTypes);
 
-        // Auto-select first tab if current selection doesn't exist
         if (uniqueTypes.length > 0) {
           const currentExists = uniqueTypes.some(t => t.value === selectedType);
           if (!currentExists) {
@@ -1288,22 +1202,6 @@ export default function Categories() {
               />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="active"
-                checked={formData.active}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, active: checked }))
-                }
-              />
-              <Label htmlFor="active" className="text-sm font-medium">
-                {isAddingItem || currentCategory?.level === 3
-                  ? 'Sub-Subcategoria ativa'
-                  : currentCategory?.level === 2 || isAddingSubcategory
-                    ? 'Subcategoria ativa'
-                    : 'Categoria ativa'}
-              </Label>
-            </div>
 
             <DialogFooter>
               <Button

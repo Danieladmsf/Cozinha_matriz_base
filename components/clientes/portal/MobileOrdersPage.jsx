@@ -25,7 +25,6 @@ import {
 
 // Sistema de Sugestões
 import { AppSettings, MenuConfig as MenuConfigEntity } from "@/app/api/entities";
-import { OrderSuggestionManager } from '@/lib/order-suggestions';
 
 // Componentes UI
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,8 +79,6 @@ import {
 
 // Tab Components
 const OrdersTab = dynamic(() => import("./tabs/OrdersTab"), { ssr: false });
-const ReceivingTab = dynamic(() => import("./tabs/ReceivingTab"), { ssr: false });
-const RuptureTab = dynamic(() => import("./tabs/RuptureTab"), { ssr: false });
 const WasteTab = dynamic(() => import("./tabs/WasteTab"), { ssr: false });
 const HistoryTab = dynamic(() => import("./tabs/HistoryTab"), { ssr: false });
 
@@ -382,23 +379,7 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
     try {
       const isEmpty = ruptureItems.every(item => (!item.rupture_time) && (!item.expected_duration)) && (!ruptureNotes);
 
-      // ✅ NOVO: Salvar ajustes de ruptura nas receitas
-      // Para cada item que teve ruptura confirmada (tem rupture_time), calcular e salvar multiplicador
-      for (const item of ruptureItems) {
-        if (item.rupture_time && item.recipe_id) {
-          // Calcular multiplicador: se previsto 2 dias mas durou 1, multiplica por 2
-          const expectedDays = item.expected_duration || 1;
-          // Estimar dias reais baseado na hora de ruptura vs hora esperada
-          // Se tem rupture_time, assume que rompeu. Por simplicidade, usar 1 dia menos que o esperado.
-          const estimatedActualDays = Math.max(0.5, expectedDays - 1); // Mínimo 0.5 dias
-          const multiplier = OrderSuggestionManager.calculateRuptureMultiplier(expectedDays, estimatedActualDays);
 
-          if (multiplier > 1.0) {
-            console.log(`📊 [saveRuptureData] Salvando ajuste de ruptura para ${item.recipe_name}: ${multiplier.toFixed(2)}x`);
-            await OrderSuggestionManager.updateRecipeAdjustment(item.recipe_id, 'rupture', multiplier);
-          }
-        }
-      }
 
       setShowRuptureSuccessEffect(true);
       setTimeout(() => {
@@ -580,21 +561,7 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
         (item.client_returned_quantity || 0) === 0
       ) && (!wasteNotes || wasteNotes.trim() === '');
 
-      // ✅ NOVO: Salvar ajustes de quebra nas receitas
-      // Para cada item que teve quebra, calcular e salvar fator de redução
-      for (const item of wasteItems) {
-        const totalWaste = (item.internal_waste_quantity || 0) + (item.client_returned_quantity || 0);
-        const orderedQty = item.ordered_quantity || 0;
 
-        if (totalWaste > 0 && orderedQty > 0 && item.recipe_id) {
-          const wasteFactor = OrderSuggestionManager.calculateWasteMultiplier(orderedQty, totalWaste);
-
-          if (wasteFactor < 1.0) {
-            console.log(`📊 [saveWasteData] Salvando ajuste de quebra para ${item.recipe_name}: ${wasteFactor.toFixed(2)}x`);
-            await OrderSuggestionManager.updateRecipeAdjustment(item.recipe_id, 'waste', wasteFactor);
-          }
-        }
-      }
 
       // Sempre ativar efeito de sucesso no início
       setShowWasteSuccessEffect(true);
@@ -2597,20 +2564,10 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 h-12">
+            <TabsList className="grid w-full grid-cols-3 h-12">
               <TabsTrigger value="orders" className="flex items-center gap-1 text-xs p-1">
                 <ShoppingCart className="w-4 h-4" />
                 <span>Pedido</span>
-              </TabsTrigger>
-              <TabsTrigger value="receive" className="flex items-center gap-1 text-xs p-1">
-                <Package className="w-4 h-4" />
-                <span className="hidden xs:inline">Recebimento</span>
-                <span className="xs:hidden">Receb.</span>
-              </TabsTrigger>
-              <TabsTrigger value="rupture" className="flex items-center gap-1 text-xs p-1">
-                <AlertTriangle className="w-4 h-4 rotate-180" />
-                <span className="hidden xs:inline">Ponto de Ruptura</span>
-                <span className="xs:hidden">Ruptura</span>
               </TabsTrigger>
               <TabsTrigger value="waste" className="flex items-center gap-1 text-xs p-1">
                 <AlertTriangle className="w-4 h-4" />
@@ -2654,49 +2611,6 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
           />
         )}
 
-        {activeTab === "receive" && (
-          <ReceivingTab
-            key={`receive-${weekNumber}-${year}-${selectedDay}`} // ✅ Força re-render
-            receivingLoading={receivingLoading}
-            existingOrders={existingOrders}
-            selectedDay={selectedDay}
-            receivingItems={receivingItems}
-            receivingNotes={receivingNotes}
-            setReceivingNotes={setReceivingNotes}
-            updateReceivingItem={updateReceivingItem}
-            markAllAsReceived={markAllAsReceived}
-            saveReceivingData={saveReceivingData}
-            showSuccessEffect={showReceivingSuccessEffect}
-            isEditMode={isReceivingEditMode}
-            enableEditMode={enableReceivingEditMode}
-            existingReceiving={existingReceiving}
-            groupItemsByCategory={portalGroupItemsByCategory}
-            getOrderedCategories={getOrderedCategories}
-            generateCategoryStyles={generateCategoryStyles}
-          />
-        )}
-
-        {activeTab === "rupture" && (
-          <RuptureTab
-            key={`rupture-${weekNumber}-${year}-${selectedDay}`}
-            ruptureLoading={ruptureLoading}
-            ruptureItems={ruptureItems}
-            ruptureNotes={ruptureNotes}
-            setRuptureNotes={setRuptureNotes}
-            updateRuptureItem={updateRuptureItem}
-            saveRuptureData={saveRuptureData}
-            showSuccessEffect={showRuptureSuccessEffect}
-            isEditMode={isRuptureEditMode}
-            enableEditMode={() => setIsRuptureEditMode(true)}
-            existingRupture={existingRupture}
-            groupItemsByCategory={portalGroupItemsByCategory}
-            getOrderedCategories={getOrderedCategories}
-            generateCategoryStyles={generateCategoryStyles}
-            selectedDay={selectedDay}
-            weekStart={weekStart}
-            storeId={customer?.vr_store_id} // Pass storeId from customer
-          />
-        )}
 
         {activeTab === "waste" && (
           <WasteTab

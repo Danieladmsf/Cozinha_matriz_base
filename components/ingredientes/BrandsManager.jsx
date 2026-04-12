@@ -91,18 +91,50 @@ export default function BrandsManager() {
     try {
       if (currentBrand?.id) {
         await Brand.update(currentBrand.id, formData);
+        
+        toast({
+          title: "Sucesso",
+          description: "Marca atualizada"
+        });
       } else {
-        await Brand.create(formData);
+        // Separa por vírgula ou ponto e vírgula e remove espaços em branco extras
+        const brandNames = formData.name
+          .split(/[,;]/)
+          .map(n => n.trim())
+          .filter(n => n.length > 0);
+
+        if (brandNames.length === 0) {
+          toast({
+            title: "Erro",
+            description: "Nenhuma marca válida para criar",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (brandNames.length === 1) {
+          await Brand.create({ ...formData, name: brandNames[0] });
+          toast({
+            title: "Sucesso",
+            description: "Marca criada"
+          });
+        } else {
+          // Criação em massa
+          const creationPromises = brandNames.map(name => {
+             return Brand.create({ ...formData, name });
+          });
+          await Promise.all(creationPromises);
+          
+          toast({
+            title: "Sucesso",
+            description: `${brandNames.length} marcas criadas em massa com sucesso!`
+          });
+        }
       }
 
       setIsDialogOpen(false);
       setCurrentBrand(null);
       await loadData();
-
-      toast({
-        title: "Sucesso",
-        description: currentBrand ? "Marca atualizada" : "Marca criada"
-      });
     } catch (error) {
       toast({
         title: "Erro",
@@ -247,8 +279,6 @@ export default function BrandsManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Preferida</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -256,18 +286,6 @@ export default function BrandsManager() {
                 {finalFilteredBrands.map((brand) => (
                   <TableRow key={brand.id}>
                     <TableCell className="font-medium font-mono">{formatCapitalize(brand.name)}</TableCell>
-                    <TableCell className="font-mono">
-                      <span className={brand.active ? "text-green-700 font-semibold" : "text-gray-500 font-semibold"}>
-                        {brand.active ? "Ativa" : "Inativa"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {brand.preferred ? (
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                      ) : (
-                        <StarOff className="h-4 w-4 text-gray-400" />
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
@@ -317,9 +335,14 @@ export default function BrandsManager() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome da marca"
+                placeholder={currentBrand ? "Nome da marca" : "Ex: Nestle, Sadia, Seara"}
                 required
               />
+              {!currentBrand && (
+                <p className="text-xs text-gray-500">
+                  Dica: Separe com vírgulas ou ponto-e-vírgula para criar várias de uma vez.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -333,25 +356,7 @@ export default function BrandsManager() {
               />
             </div>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="active"
-                  checked={formData.active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-                />
-                <Label htmlFor="active">Marca ativa</Label>
-              </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="preferred"
-                  checked={formData.preferred}
-                  onCheckedChange={(checked) => setFormData({ ...formData, preferred: checked })}
-                />
-                <Label htmlFor="preferred">Marca preferida</Label>
-              </div>
-            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/command";
 import { toast } from "@/components/ui/use-toast"
 import RecipeSettingsDialog from "@/components/receitas/RecipeSettingsDialog";
+import RecipeFormModal from "@/components/receitas/RecipeFormModal";
 import { APP_CONSTANTS } from "@/lib/constants";
 
 export default function Recipes() {
@@ -94,6 +95,9 @@ export default function Recipes() {
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [bulkToggleTarget, setBulkToggleTarget] = useState(false); // false = inativar, true = ativar
+
+  // State for new recipe modal
+  const [isNewRecipeModalOpen, setIsNewRecipeModalOpen] = useState(false);
 
   useEffect(() => {
     loadRecipes();
@@ -548,6 +552,43 @@ export default function Recipes() {
     router.push(`/ficha-tecnica?id=${recipeData.id}`);
   }, [router]);
 
+  const handleCreateRecipe = async (formData) => {
+    try {
+      const selectedCat = fullCategoryTree.find(c => c.name === formData.category && c.level === 1);
+      const recipeData = {
+        name: formData.name,
+        code: formData.code, // O código gerado já vem preenchido do modal
+        category: formData.category || '',
+        category_id: selectedCat?.id || '',
+        type: activeType,
+        active: true,
+        total_weight: 0,
+        yield_weight: 0,
+        total_cost: 0,
+        ingredients: [],
+        preparations: [],
+        dependencies: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const newRecipe = await Recipe.create(recipeData);
+      setIsNewRecipeModalOpen(false);
+      toast({
+        title: "Receita criada",
+        description: `"${formData.name}" (${recipeData.code}) foi criada. Abrindo Ficha Técnica...`,
+      });
+      // Redirecionar para ficha técnica da nova receita
+      router.push(`/ficha-tecnica?id=${newRecipe.id}`);
+    } catch (error) {
+      toast({
+        title: "Erro ao criar receita",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const buildEditGroupedCategories = () => {
     const data = fullCategoryTree.filter(c => c.active !== false);
     const roots = data.filter(c => c.level === 1).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -559,8 +600,8 @@ export default function Recipes() {
       rootsByType[type].push(root);
     });
 
-    const orderedTypes = ['produtos', 'receitas', 'ingredientes', 'contas'];
-    const typeLabels = { 'produtos': 'PRODUTOS', 'receitas': 'RECEITAS', 'ingredientes': 'INGREDIENTES', 'contas': 'CONTAS' };
+    const orderedTypes = ['produtos', 'receitas', 'ingredientes'];
+    const typeLabels = { 'produtos': 'PRODUTOS', 'receitas': 'RECEITAS', 'ingredientes': 'INGREDIENTES' };
     const presentTypes = Object.keys(rootsByType);
     const sortedTypes = [
       ...orderedTypes.filter(t => presentTypes.includes(t)),
@@ -672,6 +713,10 @@ export default function Recipes() {
                   className="pl-8"
                 />
               </div>
+              <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => setIsNewRecipeModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Receita
+              </Button>
             </div>
           </motion.div>
 
@@ -1107,6 +1152,16 @@ export default function Recipes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <RecipeFormModal
+        isOpen={isNewRecipeModalOpen}
+        onClose={() => setIsNewRecipeModalOpen(false)}
+        onSave={handleCreateRecipe}
+        editingRecipe={null}
+        fullCategoryTree={fullCategoryTree}
+        activeType={activeType}
+        existingCodes={recipes.map(r => r.code).filter(Boolean)}
+      />
     </div>
   );
 }

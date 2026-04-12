@@ -20,7 +20,6 @@ const TYPE_LABELS = {
     'receitas': 'Receitas',
     'receitas_-_base': 'Receitas - Base',
     'ingredientes': 'Ingredientes',
-    'contas': 'Contas',
     'produtos': 'Produtos',
     'equipamentos': 'Equipamentos',
     'funcionarios': 'Funcionários',

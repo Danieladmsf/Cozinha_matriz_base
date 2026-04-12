@@ -27,8 +27,7 @@ const IngredientesConsolidados = ({
   dataVersion,
   handlePrint,
   printing,
-  setShowWeekMode,
-  isSuggestionMode = false
+  setShowWeekMode
 }) => {
   // Estado para controlar a aba ativa
   const [activeTab, setActiveTab] = useState("por-fornecedor");
@@ -312,14 +311,8 @@ const IngredientesConsolidados = ({
           <div className="flex flex-col gap-1">
             <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
               <Package className="w-5 h-5" />
-              {isSuggestionMode ? 'PROJEÇÃO DE INGREDIENTES' : 'LISTA DE INGREDIENTES REAIS'}
+              LISTA DE INGREDIENTES REAIS
             </CardTitle>
-            {isSuggestionMode && (
-              <span className="text-yellow-300 text-xs font-semibold flex items-center gap-1 bg-black/20 px-2 py-0.5 rounded-full w-fit">
-                <AlertCircle className="w-3 h-3" />
-                Valores estimados matematicamente. Não são pedidos reais.
-              </span>
-            )}
           </div>
 
           <div className="flex items-center gap-4 flex-wrap justify-center">
@@ -377,18 +370,6 @@ const IngredientesConsolidados = ({
 
         {/* --- TELA NORMAL: SISTEMA DE ABAS (Oculto na impressão) --- */}
         <CardContent className="p-6 print:hidden">
-
-          {isSuggestionMode && (
-            <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-md flex gap-3 shadow-sm">
-              <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-              <div>
-                <h4 className="text-amber-800 font-bold mb-1">Atenção: Modo Projeção Ativo</h4>
-                <p className="text-amber-700 text-sm">
-                  Esta lista <strong>NÃO</strong> representa pedidos reais já feitos. Ela é uma <strong>estimativa matemática</strong> baseada no histórico de vendas dos últimos 2 meses para simular qual seria a demanda esperada para este dia/semana.
-                </p>
-              </div>
-            </div>
-          )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -601,16 +582,11 @@ const IngredientesConsolidados = ({
         <div className="hidden print:block print:w-full print:p-6 bg-white">
           <div className="mb-6 text-center border-b-2 border-black pb-4">
             <h2 className="text-2xl font-bold uppercase">
-              {isSuggestionMode ? 'PROJEÇÃO DE COMPRAS ' : 'LISTA DE COMPRAS '}
+              LISTA DE COMPRAS{' '}
               {activeTab === 'por-fornecedor' ? 'POR FORNECEDOR' :
                 activeTab === 'por-categoria' ? 'POR CATEGORIA' :
                   'ALFABÉTICA'}
             </h2>
-            {isSuggestionMode && (
-              <div className="mt-2 text-sm font-bold border border-black p-2 block w-full"> // CHANGED
-                ⚠️ ATENÇÃO: ESTA É UMA ESTIMATIVA MATEMÁTICA, NÃO SÃO PEDIDOS REAIS CONSOLIDADOS.
-              </div>
-            )}
           </div>
 
           {activeTab === 'por-fornecedor' && (

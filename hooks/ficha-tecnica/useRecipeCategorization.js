@@ -40,12 +40,11 @@ export function useRecipeCategorization({
             });
 
             // 2. Definir Ordem e Labels dos Tipos
-            const orderedTypes = ['produtos', 'receitas', 'ingredientes', 'contas'];
+            const orderedTypes = ['produtos', 'receitas', 'ingredientes'];
             const typeLabels = {
                 'produtos': 'PRODUTOS',
                 'receitas': 'RECEITAS',
-                'ingredientes': 'INGREDIENTES',
-                'contas': 'CONTAS'
+                'ingredientes': 'INGREDIENTES'
             };
 
             const presentTypes = Object.keys(rootsByType);
