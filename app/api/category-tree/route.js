@@ -3,22 +3,34 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// Normalização canônica de tipos — garante consistência no banco
+const TYPE_ALIASES = {
+  'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+  'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+  'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+};
+
+function normalizeType(rawType) {
+  const t = (rawType || '').toLowerCase().trim();
+  return TYPE_ALIASES[t] || t || 'receitas';
+}
+
 // GET /api/category-tree - Buscar categorias da árvore
 export async function GET(request) {
   try {
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
 
     let categories = await CategoryTree.getAll();
 
-    // Filtrar por tipo se especificado
+    // Filtrar por tipo se especificado (com normalização)
     if (type) {
+      const normalizedRequestType = normalizeType(type);
       categories = categories.filter(cat =>
-        cat.type === type || cat.category_type === type
+        normalizeType(cat.type) === normalizedRequestType ||
+        cat.category_type === type
       );
     }
-
 
     return NextResponse.json(categories);
 
@@ -34,6 +46,11 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const categoryData = await request.json();
+
+    // Normalizar type antes de salvar
+    if (categoryData.type) {
+      categoryData.type = normalizeType(categoryData.type);
+    }
 
     const newCategory = await CategoryTree.create(categoryData);
 
@@ -61,6 +78,11 @@ export async function PUT(request) {
     }
 
     const categoryData = await request.json();
+
+    // Normalizar type antes de atualizar
+    if (categoryData.type) {
+      categoryData.type = normalizeType(categoryData.type);
+    }
 
     const updatedCategory = await CategoryTree.update(id, categoryData);
 
