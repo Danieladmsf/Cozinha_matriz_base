@@ -82,9 +82,20 @@ export async function GET(request) {
             }
           }
 
-          // Filtrar por tipo (receitas ou produtos)
-          if (type && recipe.type !== type) {
-            return false;
+          // Filtrar por tipo (receitas ou produtos) — com normalização
+          if (type) {
+            // Mapa de variações para tipos canônicos
+            const typeAliases = {
+              'receitas': ['receitas', 'receita', 'recipe', 'recipes'],
+              'produtos': ['produtos', 'produto', 'product', 'products']
+            };
+            
+            const requestedAliases = typeAliases[type] || [type];
+            const recipeType = (recipe.type || '').toLowerCase();
+            
+            if (!requestedAliases.includes(recipeType)) {
+              return false;
+            }
           }
 
           // Busca apenas no NOME da receita - ignorando acentos

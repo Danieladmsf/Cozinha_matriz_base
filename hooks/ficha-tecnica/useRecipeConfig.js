@@ -170,13 +170,21 @@ export function useRecipeConfig() {
       })), null, 2));
 
       // Preparar dados da receita para salvamento (sanitizar undefined values)
+      // NORMALIZAÇÃO CANÔNICA: Garante que o type salvo SEMPRE seja 'receitas' ou 'produtos'
+      const normalizeType = (rawType) => {
+        const t = (rawType || '').toLowerCase().trim();
+        const PRODUTOS_ALIASES = ['produtos', 'produto', 'product', 'products'];
+        if (PRODUTOS_ALIASES.includes(t)) return 'produtos';
+        return 'receitas'; // Default seguro
+      };
+
       const recipeToSave = {
         ...recipeData, // Spread first to capture extra fields
 
         // Explicit fields overwrite base fields if needed
         name: toTitleCase(recipeData.name || ''),
         name_complement: recipeData.name_complement || '',
-        type: recipeData.type || 'receitas',
+        type: normalizeType(recipeData.type),
         category: recipeData.category || '',
         prep_time: parseFloat(recipeData.prep_time) || 0,
         total_weight: parseFloat(recipeData.total_weight) || 0,
