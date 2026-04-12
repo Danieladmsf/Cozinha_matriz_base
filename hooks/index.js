@@ -8,5 +8,4 @@ export * from './ingredientes';
 export * from './pedidos';
 export * from './ficha-tecnica';
 export * from './analise-de-receitas';
-export * from './clientes';
 export * from './shared';

@@ -8,10 +8,8 @@ import {
   ChefHat,
   Package,
   Building2,
-  Users,
   Tag,
   Menu,
-  CircleDollarSign,
   Apple,
   Utensils,
   TrendingUp,
@@ -19,9 +17,7 @@ import {
   Clipboard,
   Settings,
   ClipboardList,
-  DollarSign,
   Wrench,
-  GitBranch,
   ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,8 +45,6 @@ export default function RootLayout({ children }) {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Quadro de Equipe", href: "/quadro-de-equipe", icon: Users },
-    { name: "Fluxo de Trabalho", href: "/fluxo-de-trabalho", icon: GitBranch },
     { name: "Receitas", href: "/receitas", icon: ChefHat },
     { name: "Produtos (SKU)", href: "/produtos", icon: ShoppingBag },
     { name: "Ficha Técnica", href: "/ficha-tecnica", icon: Clipboard },
@@ -60,8 +54,6 @@ export default function RootLayout({ children }) {
     { name: "Insumos", href: "/ingredientes", icon: Package },
     { name: "Categorias", href: "/categorias", icon: Tag },
     { name: "Fornecedores e Serviços", href: "/fornecedores-e-servicos", icon: Building2 },
-    { name: "Clientes", href: "/clientes", icon: Users },
-    { name: "Fechamento", href: "/fechamento", icon: DollarSign },
     { name: "Tabela Nutricional", href: "/tabela-nutricional", icon: Apple }
   ];
 
