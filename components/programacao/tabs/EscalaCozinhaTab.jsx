@@ -293,7 +293,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
     };
 
     // =========================================
-    // PRINT: Listas Consolidadas
+    // PRINT: Listas Planejamento
     // =========================================
     const handlePrintConsolidated = async () => {
         setPrinting(true);
@@ -322,7 +322,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
 
                 return `<div style="margin-bottom:28px;">
                     <h2 style="font-size:15px;font-weight:700;margin:0 0 8px 0;padding:8px 12px;background:#f3f4f6;border-radius:4px;border-bottom:2px solid #d1d5db;text-transform:uppercase;letter-spacing:0.5px;">
-                        ${taskDef.label} (Consolidada)
+                        ${taskDef.label}
                         <span style="float:right;font-size:12px;font-weight:400;color:#6b7280;">${items.length} itens</span>
                     </h2>
                     <table style="width:100%;border-collapse:collapse;">
@@ -343,7 +343,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
 <html>
 <head>
 <meta charset="utf-8">
-<title>Listas Consolidadas - ${dateLabel}</title>
+<title>Listas Planejamento - ${dateLabel}</title>
 <style>
 @page { margin: 15mm; size: A4 portrait; }
 body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #111; font-size: 13px; }
@@ -610,7 +610,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
                                     ) : (
                                         <Printer className="w-4 h-4" />
                                     )}
-                                    Imprimir Consolidadas
+                                    Imprimir Planejamento
                                 </Button>
                             </div>
                         </CardHeader>
@@ -625,7 +625,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
                                     <CardTitle className={`flex items-center justify-between ${taskDef.textClass}`}>
                                         <div className="flex items-center gap-2">
                                             <ClipboardList className="w-5 h-5" />
-                                            {taskDef.label} (Consolidada)
+                                            {taskDef.label}
                                         </div>
                                         <div className="text-sm font-medium">
                                             {dateLabel}
@@ -719,3 +719,4 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
 };
 
 export default EscalaCozinhaTab;
+
