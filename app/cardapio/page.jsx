@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Settings, RefreshCw } from "lucide-react";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import CardapioSemanal from './cardapio-semanal';
 import TabelaNutricional from './tabela-nutricional';
@@ -29,6 +30,15 @@ export default function MenuMainPage() {
               text="Atualizar Página"
               size="sm"
             />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/configurar-cardapio'}
+              className="gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Configurações
+            </Button>
           </div>
         </div>
 
