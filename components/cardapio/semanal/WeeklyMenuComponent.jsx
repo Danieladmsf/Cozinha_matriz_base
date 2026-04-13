@@ -434,6 +434,15 @@ export default function WeeklyMenuComponent() {
                       }
 
                       if (categoriesToShow.length === 0) {
+                        // Se ainda está carregando ou mealType não foi definido, mostrar skeleton
+                        if (loading || !menuConfig || !mealType) {
+                          return (
+                            <div className="space-y-4 animate-pulse">
+                              <div className="bg-gray-100 rounded-lg h-32 w-full" />
+                              <div className="bg-gray-100 rounded-lg h-24 w-full" />
+                            </div>
+                          );
+                        }
                         return (
                           <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
                             <p className="text-gray-500">Nenhuma categoria configurada para esta aba.</p>
