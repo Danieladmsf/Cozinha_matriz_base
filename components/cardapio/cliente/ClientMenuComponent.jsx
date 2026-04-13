@@ -217,7 +217,7 @@ export default function ClientMenuComponent() {
               {/* Botões de modo de exibição */}
               <div className="px-4 pt-3 pb-1 flex items-center gap-2">
                 <span className="text-xs font-medium text-gray-500">Exibir:</span>
-                {[2, 3, 5, 7].map(n => (
+                {[1, 2, 3, 4, 5, 6, 7].map(n => (
                   <button
                     key={n}
                     onClick={() => setVisibleDays(n)}
