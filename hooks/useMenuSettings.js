@@ -157,7 +157,7 @@ export const useMenuSettings = () => {
 
       const configData = {
         user_id: mockUserId,
-        expanded_categories: [], // Sempre vazio — locais começam colapsados por padrão
+        expanded_categories: expandedCategories || [],
         category_colors: categoryColors || {},
         fixed_dropdowns: fixedDropdowns || {},
         available_days: availableDays || [0, 1, 2, 3, 4, 5, 6],
