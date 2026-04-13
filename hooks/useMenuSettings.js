@@ -217,7 +217,8 @@ export const useMenuSettings = () => {
   const toggleCategoryActive = (categoryId) => {
     setActiveCategories(prev => ({
       ...prev,
-      [categoryId]: !Boolean(prev[categoryId])
+      // Se está ativo (true ou undefined/padrão), desativar. Se false, ativar.
+      [categoryId]: prev[categoryId] === false ? true : false
     }));
   };
 
