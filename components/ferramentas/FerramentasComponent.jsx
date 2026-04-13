@@ -37,8 +37,16 @@ import {
     Info,
     ShieldCheck,
     X,
+    Scissors, Box, Truck, Utensils, Flame, Droplet, Zap, Heart, Star
 
 } from 'lucide-react';
+
+// Mapa de ícones disponíveis
+const ICON_MAP = {
+    Wrench, Scissors, AlertTriangle, Package, Thermometer, Clock,
+    Settings, Shield, Info, ShieldCheck, FileText, Box, Truck,
+    Utensils, Flame, Droplet, Zap, Heart, Star
+};
 import {
     AlertDialog,
     AlertDialogAction,
@@ -391,13 +399,13 @@ export default function FerramentasComponent({ categoria }) {
                 imageUrl: localData.imageUrl?.trim() || '',
                 logoUrl: localData.logoUrl?.trim() || '',
                 materiais: localData.materiais?.trim() || '',
-                materiais: localData.materiais?.trim() || '',
                 especificacoes: localData.especificacoes?.trim() || '',
                 custoOperacional: localData.custoOperacional || '',
                 potencia: localData.potencia || '',
                 usabilidade: localData.usabilidade?.trim() || '',
                 manutencao: localData.manutencao?.trim() || '',
                 precaucoes: localData.precaucoes?.trim() || '',
+                customSections: localData.customSections || {},
                 passos: passosValidos,
                 titulos: localData.titulos || {},
                 updatedAt: serverTimestamp()
@@ -563,42 +571,31 @@ export default function FerramentasComponent({ categoria }) {
         return { ...cardConfig, titulo: effectiveTitle, originalTitle: cardConfig.titulo };
     };
 
-    // Verifica se um card está configurado na categoria
-    const hasCard = (cardId) => {
-        if (!categoria?.cards || categoria.cards.length === 0) {
-            // Cards padrão (ferramentas legacy)
-            return ['dados', 'epis', 'manutencao', 'precaucoes'].includes(cardId);
-        }
-        // Mapeamento de IDs legados e títulos conhecidos
-        const idMap = {
-            'especificacoes': 'dados',
-            'materiais': 'epis',
-        };
-        const titleMap = {
-            'dados': ['dados técnicos', 'dados'],
-            'usabilidade': ['usabilidade'],
-            'epis': ['epis necessários', 'epis', 'epi\'s'],
-            'manutencao': ['manutenção', 'manutencao'],
-            'precaucoes': ['precauções de segurança', 'precaucoes', 'precauções'],
-        };
-
-        const mapId = idMap[cardId] || cardId;
-        const possibleTitles = titleMap[cardId] || [cardId];
-
-        return categoria.cards.some(c => {
-            // Buscar por ID
-            if (c.id === mapId || c.id === cardId) return true;
-            // Buscar por título (case-insensitive)
-            const cardTitulo = (c.titulo || '').toLowerCase().trim();
-            return possibleTitles.some(t => cardTitulo.includes(t.toLowerCase()));
-        });
+    const getSectionValue = (cardId) => {
+        const legacyMap = { 'dados': 'especificacoes', 'epis': 'materiais', 'manutencao': 'manutencao', 'precaucoes': 'precaucoes', 'usabilidade': 'usabilidade' };
+        const legacyField = legacyMap[cardId];
+        if (legacyField && localData[legacyField] !== undefined) return localData[legacyField];
+        return localData.customSections?.[cardId] || '';
     };
 
-    const configDados = getSectionConfig('dados', 'Dados Técnicos');
-    const configUsabilidade = getSectionConfig('usabilidade', 'Usabilidade');
-    const configEpis = getSectionConfig('epis', 'EPIs Necessários');
-    const configManutencao = getSectionConfig('manutencao', 'Manutenção');
-    const configPrecaucoes = getSectionConfig('precaucoes', 'Precauções de Segurança', 'text-red-700');
+    const setSectionValue = (cardId, html) => {
+        const legacyMap = { 'dados': 'especificacoes', 'epis': 'materiais', 'manutencao': 'manutencao', 'precaucoes': 'precaucoes', 'usabilidade': 'usabilidade' };
+        const legacyField = legacyMap[cardId];
+        setLocalData(prev => {
+            if (legacyField) return { ...prev, [legacyField]: html };
+            return { ...prev, customSections: { ...(prev.customSections || {}), [cardId]: html } };
+        });
+        setIsDirty(true);
+    };
+
+    const visibleCards = (categoria?.cards && categoria.cards.length > 0) 
+        ? categoria.cards 
+        : [
+            { id: 'dados', titulo: 'Dados Técnicos', cor: 'text-blue-600', icone: 'Info' },
+            { id: 'epis', titulo: 'EPIs Necessários', cor: 'text-orange-500', icone: 'ShieldCheck' },
+            { id: 'manutencao', titulo: 'Manutenção', cor: 'text-gray-500', icone: 'Settings' },
+            { id: 'precaucoes', titulo: 'Precauções de Segurança', cor: 'text-red-700', icone: 'Shield' }
+        ];
 
     // Renderizador de Cabeçalho Editável
     const renderSectionHeader = (id, config) => {
@@ -641,10 +638,12 @@ export default function FerramentasComponent({ categoria }) {
             );
         }
 
-        const Icon = id === 'precaucoes' ? AlertTriangle : null;
+        const Icon = config.icone ? ICON_MAP[config.icone] : (id === 'precaucoes' ? AlertTriangle : null);
+        const corClass = config.cor?.startsWith('#') ? '' : (config.cor || 'text-gray-900');
+        const corStyle = config.cor?.startsWith('#') ? { color: config.cor } : {};
 
         return (
-            <h3 className={`text-xs font-bold uppercase tracking-wider ${config.cor} mb-3 border-b border-gray-200 pb-1 flex justify-between items-center group`}>
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${corClass} mb-3 border-b border-gray-200 pb-1 flex justify-between items-center group`} style={corStyle}>
                 <span className="flex items-center gap-2">
                     {Icon && <Icon className="w-4 h-4" />}
                     {config.titulo}
@@ -965,123 +964,76 @@ export default function FerramentasComponent({ categoria }) {
                                 </div>
                             </div>
 
-                            {/* DADOS TÉCNICOS - Condicional */}
-                            {hasCard('dados') && (
+                            {/* Campos de Cálculo de Custo (Apenas para Equipamentos) */}
+                            {categoria?.tipoCalculo === 'equipment' && (
                                 <div className="bg-white rounded border border-gray-300 p-4 print:border-gray-800 break-inside-avoid">
-                                    {renderSectionHeader('dados', configDados)}
-
-                                    {/* Campos de Cálculo de Custo (Apenas para Equipamentos) */}
-                                    {categoria?.tipoCalculo === 'equipment' && (
-                                        <div className={`mb-4 p-3 rounded border ${isEditing ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-100'}`}>
-                                            {isEditing ? (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-xs font-bold text-orange-800 uppercase mb-1 block">Custo Médio (R$/Hora)</label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={localData.custoOperacional}
-                                                            onChange={(e) => { setLocalData(prev => ({ ...prev, custoOperacional: e.target.value })); setIsDirty(true); }}
-                                                            placeholder="0.00"
-                                                            className="bg-white"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold text-orange-800 uppercase mb-1 block">Potência (Watts)</label>
-                                                        <Input
-                                                            type="number"
-                                                            value={localData.potencia}
-                                                            onChange={(e) => { setLocalData(prev => ({ ...prev, potencia: e.target.value })); setIsDirty(true); }}
-                                                            placeholder="Ex: 2500"
-                                                            className="bg-white"
-                                                        />
-                                                    </div>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-orange-600 mb-3 border-b border-gray-200 pb-1 flex items-center gap-2">
+                                        <Zap className="w-4 h-4" /> Desempenho e Custo
+                                    </h3>
+                                    <div className={`p-3 rounded border ${isEditing ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-100'}`}>
+                                        {isEditing ? (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs font-bold text-orange-800 uppercase mb-1 block">Custo Médio (R$/Hora)</label>
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={localData.custoOperacional}
+                                                        onChange={(e) => { setLocalData(prev => ({ ...prev, custoOperacional: e.target.value })); setIsDirty(true); }}
+                                                        placeholder="0.00"
+                                                        className="bg-white"
+                                                    />
                                                 </div>
-                                            ) : (
-                                                <div className="flex gap-6 text-sm">
-                                                    <div>
-                                                        <span className="text-gray-500 font-bold text-xs uppercase block">Custo Operacional</span>
-                                                        <span className="font-mono font-medium text-gray-900">
-                                                            {localData.custoOperacional ? `R$ ${parseFloat(localData.custoOperacional).toFixed(2)} / hora` : '---'}
-                                                        </span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-500 font-bold text-xs uppercase block">Potência</span>
-                                                        <span className="font-mono font-medium text-gray-900">
-                                                            {localData.potencia ? `${localData.potencia} W` : '---'}
-                                                        </span>
-                                                    </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-orange-800 uppercase mb-1 block">Potência (Watts)</label>
+                                                    <Input
+                                                        type="number"
+                                                        value={localData.potencia}
+                                                        onChange={(e) => { setLocalData(prev => ({ ...prev, potencia: e.target.value })); setIsDirty(true); }}
+                                                        placeholder="Ex: 2500"
+                                                        className="bg-white"
+                                                    />
                                                 </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {isEditing ? (
-                                        <RichTextEditor
-                                            value={localData.especificacoes}
-                                            onChange={(html) => { setLocalData(prev => ({ ...prev, especificacoes: html })); setIsDirty(true); }}
-                                            placeholder={`${configDados.titulo}...`}
-                                        />
-                                    ) : (
-                                        <div className="text-sm text-gray-800 leading-snug" dangerouslySetInnerHTML={{ __html: localData.especificacoes || "---" }} />
-
-                                    )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex gap-6 text-sm">
+                                                <div>
+                                                    <span className="text-gray-500 font-bold text-xs uppercase block">Custo Operacional</span>
+                                                    <span className="font-mono font-medium text-gray-900">
+                                                        {localData.custoOperacional ? `R$ ${parseFloat(localData.custoOperacional).toFixed(2)} / hora` : '---'}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500 font-bold text-xs uppercase block">Potência</span>
+                                                    <span className="font-mono font-medium text-gray-900">
+                                                        {localData.potencia ? `${localData.potencia} W` : '---'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
-                            {/* USABILIDADE - Condicional */}
-                            {hasCard('usabilidade') && (
-                                <div className="bg-white rounded border border-gray-300 p-4 print:border-gray-800 break-inside-avoid">
-                                    {renderSectionHeader('usabilidade', configUsabilidade)}
+                            {/* DYNAMIC CARDS RENDERING */}
+                            {visibleCards.map((card) => {
+                                const config = getSectionConfig(card.id, card.titulo, card.cor || 'text-gray-900', card.icone);
+                                return (
+                                    <div key={card.id} className="bg-white rounded border border-gray-300 p-4 print:border-gray-800 break-inside-avoid">
+                                        {renderSectionHeader(card.id, config)}
 
-                                    {isEditing ? (
-                                        <RichTextEditor
-                                            value={localData.usabilidade}
-                                            onChange={(html) => { setLocalData(prev => ({ ...prev, usabilidade: html })); setIsDirty(true); }}
-                                            placeholder={`${configUsabilidade.titulo}...`}
-                                        />
-                                    ) : (
-                                        <div className="text-sm text-gray-800 leading-snug" dangerouslySetInnerHTML={{ __html: localData.usabilidade || "---" }} />
-
-                                    )}
-                                </div>
-                            )}
-
-                            {/* EPIs NECESSÁRIOS - Condicional */}
-                            {hasCard('epis') && (
-                                <div className="bg-white rounded border border-gray-300 p-4 print:border-gray-800 break-inside-avoid">
-                                    {renderSectionHeader('epis', configEpis)}
-
-                                    {isEditing ? (
-                                        <RichTextEditor
-                                            value={localData.materiais}
-                                            onChange={(html) => { setLocalData(prev => ({ ...prev, materiais: html })); setIsDirty(true); }}
-                                            placeholder={`${configEpis.titulo}...`}
-                                        />
-                                    ) : (
-                                        <div className="text-sm text-gray-800 leading-snug" dangerouslySetInnerHTML={{ __html: localData.materiais || "---" }} />
-
-                                    )}
-                                </div>
-                            )}
-
-                            {/* MANUTENÇÃO / FERRAMENTAS - Condicional */}
-                            {hasCard('manutencao') && (
-                                <div className="bg-white rounded border border-gray-300 p-4 print:border-gray-800 break-inside-avoid">
-                                    {renderSectionHeader('manutencao', configManutencao)}
-
-                                    {isEditing ? (
-                                        <RichTextEditor
-                                            value={localData.manutencao}
-                                            onChange={(html) => { setLocalData(prev => ({ ...prev, manutencao: html })); setIsDirty(true); }}
-                                            placeholder={`${configManutencao.titulo}...`}
-                                        />
-                                    ) : (
-                                        <div className="text-sm text-gray-800 leading-snug" dangerouslySetInnerHTML={{ __html: localData.manutencao || "---" }} />
-
-                                    )}
-                                </div>
-                            )}
+                                        {isEditing ? (
+                                            <RichTextEditor
+                                                value={getSectionValue(card.id)}
+                                                onChange={(html) => setSectionValue(card.id, html)}
+                                                placeholder={`${config.titulo}...`}
+                                            />
+                                        ) : (
+                                            <div className="text-sm text-gray-800 leading-snug" dangerouslySetInnerHTML={{ __html: getSectionValue(card.id) || "---" }} />
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* === COLUNA DIREITA === */}
@@ -1265,24 +1217,6 @@ export default function FerramentasComponent({ categoria }) {
                                     )}
                                 </div>
                             </div>
-
-                            {/* PRECAUÇÕES DE SEGURANÇA - Condicional */}
-                            {hasCard('precaucoes') && (
-                                <div className="bg-red-50 border border-red-200 p-4 rounded print:border-red-900 mt-6 break-inside-avoid">
-                                    {renderSectionHeader('precaucoes', configPrecaucoes)}
-
-                                    {isEditing ? (
-                                        <RichTextEditor
-                                            value={localData.precaucoes}
-                                            onChange={(html) => { setLocalData(prev => ({ ...prev, precaucoes: html })); setIsDirty(true); }}
-                                            placeholder={`${configPrecaucoes.titulo}...`}
-                                        />
-                                    ) : (
-                                        <div className="text-sm text-red-900 leading-snug" dangerouslySetInnerHTML={{ __html: localData.precaucoes || "---" }} />
-
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

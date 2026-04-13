@@ -278,51 +278,20 @@ const HtmlText = ({ html }) => {
 };
 
 export default function PopDocument({ data, cards }) {
-    // Mapeamento de IDs legados e títulos conhecidos
-    const idMap = {
-        'especificacoes': 'dados',
-        'materiais': 'epis',
-    };
-    const titleMap = {
-        'dados': ['dados técnicos', 'dados'],
-        'usabilidade': ['usabilidade'],
-        'epis': ['epis necessários', 'epis', 'epi\'s'],
-        'manutencao': ['manutenção', 'manutencao'],
-        'precaucoes': ['precauções de segurança', 'precaucoes', 'precauções'],
-    };
+    const visibleCards = (cards && cards.length > 0) 
+        ? cards 
+        : [
+            { id: 'dados', titulo: 'Dados Técnicos', cor: 'text-blue-600', icone: 'Info' },
+            { id: 'epis', titulo: 'EPIs Necessários', cor: 'text-orange-500', icone: 'ShieldCheck' },
+            { id: 'manutencao', titulo: 'Manutenção', cor: 'text-gray-500', icone: 'Settings' },
+            { id: 'precaucoes', titulo: 'Precauções de Segurança', cor: 'text-red-700', icone: 'Shield' }
+        ];
 
-    // Verifica se um card está configurado
-    const hasCard = (cardId) => {
-        if (!cards || cards.length === 0) {
-            // Cards padrão (ferramentas legacy)
-            return ['dados', 'epis', 'manutencao', 'precaucoes'].includes(cardId);
-        }
-
-        const mapId = idMap[cardId] || cardId;
-        const possibleTitles = titleMap[cardId] || [cardId];
-
-        return cards.some(c => {
-            // Buscar por ID
-            if (c.id === mapId || c.id === cardId) return true;
-            // Buscar por título (case-insensitive)
-            const cardTitulo = (c.titulo || '').toLowerCase().trim();
-            return possibleTitles.some(t => cardTitulo.includes(t.toLowerCase()));
-        });
-    };
-
-    // Obtém título do card
-    const getCardTitle = (cardId, defaultTitle) => {
-        if (!cards) return defaultTitle;
-
-        const mapId = idMap[cardId] || cardId;
-        const possibleTitles = titleMap[cardId] || [cardId];
-
-        const card = cards.find(c => {
-            if (c.id === mapId || c.id === cardId) return true;
-            const cardTitulo = (c.titulo || '').toLowerCase().trim();
-            return possibleTitles.some(t => cardTitulo.includes(t.toLowerCase()));
-        });
-        return card?.titulo || defaultTitle;
+    const getSectionValue = (cardId) => {
+        const legacyMap = { 'dados': 'especificacoes', 'epis': 'materiais', 'manutencao': 'manutencao', 'precaucoes': 'precaucoes', 'usabilidade': 'usabilidade' };
+        const legacyField = legacyMap[cardId];
+        if (legacyField && data[legacyField] !== undefined) return data[legacyField];
+        return data.customSections?.[cardId] || '';
     };
 
     return (
@@ -350,9 +319,8 @@ export default function PopDocument({ data, cards }) {
                 <Text style={styles.mainTitle}>{data.nome || 'Nova Ferramenta'}</Text>
                 {data.descricao && <Text style={styles.description}>{data.descricao.replace(/<[^>]*>/g, '')}</Text>}
 
-                {/* IMAGEM À ESQUERDA + DADOS TÉCNICOS À DIREITA */}
+                {/* IMAGEM À ESQUERDA + PRIMEIRO CARD À DIREITA */}
                 <View style={{ flexDirection: 'row', marginBottom: 10 }}>
-                    {/* Imagem à esquerda */}
                     <View style={{ width: '35%', marginRight: 10 }}>
                         {data.imageUrl && (
                             <View style={styles.mainImageContainer}>
@@ -360,51 +328,35 @@ export default function PopDocument({ data, cards }) {
                             </View>
                         )}
                     </View>
-                    {/* Dados Técnicos à direita - Condicional */}
-                    {hasCard('dados') && (
+                    
+                    {visibleCards.length > 0 && (
                         <View style={{ flex: 1 }}>
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>{getCardTitle('dados', 'Dados Técnicos')}</Text>
-                                <HtmlText html={data.especificacoes} />
+                            <View style={visibleCards[0].icone === 'Shield' || visibleCards[0].id === 'precaucoes' ? styles.warningBox : styles.section}>
+                                <Text style={visibleCards[0].icone === 'Shield' || visibleCards[0].id === 'precaucoes' ? styles.warningTitle : styles.sectionTitle}>
+                                    {visibleCards[0].titulo}
+                                </Text>
+                                <HtmlText html={getSectionValue(visibleCards[0].id)} />
                             </View>
                         </View>
                     )}
                 </View>
 
-                {/* DEMAIS CARDS EM LISTA VERTICAL - Condicionais */}
-                <View style={{ marginBottom: 10 }}>
-                    {/* Usabilidade - Condicional */}
-                    {hasCard('usabilidade') && (
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>{getCardTitle('usabilidade', 'Usabilidade')}</Text>
-                            <HtmlText html={data.usabilidade} />
-                        </View>
-                    )}
-
-                    {/* EPIs Necessários - Condicional */}
-                    {hasCard('epis') && (
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>{getCardTitle('epis', 'EPIs Necessários')}</Text>
-                            <HtmlText html={data.materiais} />
-                        </View>
-                    )}
-
-                    {/* Manutenção - Condicional */}
-                    {hasCard('manutencao') && (
-                        <View style={styles.section} wrap={false}>
-                            <Text style={styles.sectionTitle}>{getCardTitle('manutencao', 'Manutenção')}</Text>
-                            <HtmlText html={data.manutencao} />
-                        </View>
-                    )}
-
-                    {/* Precauções de Segurança - Condicional */}
-                    {hasCard('precaucoes') && (
-                        <View style={styles.warningBox} wrap={false}>
-                            <Text style={styles.warningTitle}>{getCardTitle('precaucoes', 'Precauções de Segurança')}</Text>
-                            <HtmlText html={data.precaucoes} />
-                        </View>
-                    )}
-                </View>
+                {/* DEMAIS CARDS EM LISTA VERTICAL */}
+                {visibleCards.length > 1 && (
+                    <View style={{ marginBottom: 10 }}>
+                        {visibleCards.slice(1).map(card => {
+                            const isWarning = card.icone === 'Shield' || card.id === 'precaucoes';
+                            return (
+                                <View key={card.id} style={isWarning ? styles.warningBox : styles.section} wrap={false}>
+                                    <Text style={isWarning ? styles.warningTitle : styles.sectionTitle}>
+                                        {card.titulo}
+                                    </Text>
+                                    <HtmlText html={getSectionValue(card.id)} />
+                                </View>
+                            );
+                        })}
+                    </View>
+                )}
 
                 {/* STEPS - Starts on new page */}
                 {/* Fixed sub-header for procedure pages (appears below main header on page 3+) */}

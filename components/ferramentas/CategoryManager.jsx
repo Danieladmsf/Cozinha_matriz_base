@@ -328,34 +328,7 @@ export default function CategoryManager({ open, onClose, categoria, onSave }) {
                         </p>
                     </div>
 
-                    {/* Tipo de Cálculo */}
-                    <div className="mb-4">
-                        <label className="text-sm font-medium text-gray-700 mb-1 block">Tipo de Cálculo</label>
-                        <Select value={formData.tipoCalculo} onValueChange={(v) => setFormData(p => ({ ...p, tipoCalculo: v }))}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="w-4 h-4 text-gray-500" />
-                                        <span>Padrão (Apenas Texto - Limpeza, Conduta, etc)</span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="equipment">
-                                    <div className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-orange-500" />
-                                        <span>Equipamento (Custo/Hora - Fornos, Fogões, etc)</span>
-                                    </div>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                            {formData.tipoCalculo === 'equipment'
-                                ? 'Habilita campos de Custo e Potência nos POPs desta categoria para cálculo automático em receitas.'
-                                : 'POPs desta categoria são apenas informativos e não impactam o custo da receita.'}
-                        </p>
-                    </div>
+
 
                     {/* Cards */}
                     <div>

@@ -200,7 +200,10 @@ const IngredientRow = ({
         <TableCell colSpan={100} className="px-6 py-3 text-sm text-yellow-800 italic">
           <div className="flex items-start gap-2">
             <StickyNote className="h-4 w-4 mt-0.5 opacity-60 flex-shrink-0" />
-            <span className="whitespace-pre-wrap">{ingredient.name}</span>
+            <div 
+              className="whitespace-pre-wrap prose prose-sm max-w-none text-yellow-800 [&_p]:m-0 italic"
+              dangerouslySetInnerHTML={{ __html: ingredient.name }}
+            />
           </div>
         </TableCell>
       </TableRow>

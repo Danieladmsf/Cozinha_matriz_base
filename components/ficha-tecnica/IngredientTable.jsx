@@ -167,9 +167,32 @@ const IngredientTable = ({
               className="h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={prep.assembly_config?.unit_type || 'un'}
               onChange={(e) => {
+                const newType = e.target.value;
+                let newQty = prep.assembly_config?.units_quantity || 1;
+
+                if (newType === 'kg' && prep.assembly_config?.unit_type !== 'kg') {
+                    let totalWt = 0;
+                    const subComponents = prep.sub_components || [];
+                    subComponents.forEach(sc => {
+                      const sourcePrep = rest.preparations?.find(p => p.id === sc.source_id);
+                      const isPackaging = sourcePrep?.processes?.includes('packaging') || sc.isPackaging === true;
+                      if (!isPackaging) {
+                        totalWt += (parseNumericValue(sc.assembly_weight_kg) || 0);
+                      }
+                    });
+
+                    if (totalWt > 0) {
+                      // Se tem peso, auto-ajusta o campo para refletir o peso corrente, para habilitar a escala proporcional
+                      newQty = totalWt.toFixed(3).replace('.', ',');
+                    }
+                } else if (newType === 'un' && prep.assembly_config?.unit_type === 'kg') {
+                    newQty = 1; // Reseta para 1 unidade como fallback seguro
+                }
+
                 const newConfig = {
                   ...(prep.assembly_config || {}),
-                  unit_type: e.target.value
+                  unit_type: newType,
+                  units_quantity: newQty
                 };
                 onUpdatePreparation(prepIndex, 'assembly_config', newConfig);
               }}
