@@ -248,18 +248,34 @@ const OrdersTab = ({
                               </p>
                               <p className="text-xs text-blue-600">
                                 {item.tech_sheet_units_quantity > 0 && item.tech_sheet_unit_weight > 0 && (() => {
-                                  const isPorcao = item.unit_type && item.unit_type.toLowerCase() === 'porção';
-                                  const unitText = isPorcao ? 'Unid.' : (item.unit_type && item.unit_type.toLowerCase() !== 'unid' && item.unit_type.toLowerCase() !== 'unidade' ? item.unit_type : (item.tech_sheet_units_quantity > 1 ? 'unidades' : 'unidade'));
+                                  const unitTypeLower = item.unit_type ? item.unit_type.toLowerCase() : '';
+                                  const isPorcao = unitTypeLower === 'porção';
+                                  const isKg = unitTypeLower === 'kg' || unitTypeLower === 'quilo';
+                                  
+                                  const totalRecipeWeight = (item.tech_sheet_units_quantity || 0) * (item.tech_sheet_unit_weight || 0);
+
+                                  if (isKg) {
+                                      return (
+                                        <>
+                                          <span className="text-purple-600 text-[9px]">
+                                            (1 {item.tech_sheet_container_type || 'unidade'} de {utilFormatWeight(totalRecipeWeight)})
+                                          </span>
+                                          <br />
+                                        </>
+                                      );
+                                  }
+
+                                  const unitText = isPorcao ? 'Unid.' : (unitTypeLower !== 'unid' && unitTypeLower !== 'unidade' ? item.unit_type : (item.tech_sheet_units_quantity > 1 ? 'unidades' : 'unidade'));
 
                                   let weightInfo = '';
                                   if (isPorcao) {
-                                    weightInfo = ` | Peso: ${utilFormatWeight((item.tech_sheet_units_quantity || 0) * (item.tech_sheet_unit_weight || 0))}`;
+                                    weightInfo = ` | Peso: ${utilFormatWeight(totalRecipeWeight)}`;
                                   }
 
                                   return (
                                     <>
                                       <span className="text-purple-600 text-[9px]">
-                                        (Contém, {item.tech_sheet_units_quantity} {item.tech_sheet_container_type || unitText} de {utilFormatWeight(item.tech_sheet_unit_weight)}){weightInfo}
+                                        (Contém {item.tech_sheet_units_quantity} {item.tech_sheet_container_type || unitText} de {utilFormatWeight(item.tech_sheet_unit_weight)}){weightInfo}
                                       </span>
                                       <br />
                                     </>
