@@ -98,7 +98,8 @@ const IngredientTable = ({
                   const currentWeight = parseNumericValue(sc.assembly_weight_kg) || 0;
                   return {
                     ...sc,
-                    assembly_weight_kg: Number((currentWeight * factor).toFixed(4)).toString().replace('.', ',')
+                    // Padrão da cozinha: sempre 3 casas decimais (ex: 0,650 ou 1,000)
+                    assembly_weight_kg: (currentWeight * factor).toFixed(3).replace('.', ',')
                   };
                 });
 
