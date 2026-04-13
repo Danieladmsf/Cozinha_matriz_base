@@ -577,18 +577,18 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
                         className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:border-gray-900 border border-transparent hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-sm"
                     >
                         <ClipboardList className="w-4 h-4" />
-                        Listas Consolidadas
+                        Planejamento de Insumos
                     </TabsTrigger>
                     <TabsTrigger
                         value="config"
                         className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:border-gray-900 border border-transparent hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-sm"
                     >
                         <Settings2 className="w-4 h-4" />
-                        Configuração de Receitas
+                        Distribuição de Tarefas
                     </TabsTrigger>
                 </TabsList>
 
-                {/* LISTAS CONSOLIDADAS MODE */}
+                {/* PLANEJAMENTO DE INSUMOS MODE */}
                 <TabsContent value="pre_preparo_list" className="mt-6 flex flex-col gap-6">
                     {/* Header com botão de impressão */}
                     <Card className="border border-gray-200 bg-white">
@@ -596,7 +596,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <CardTitle className="flex items-center gap-2 text-gray-800 text-base uppercase tracking-wide">
                                     <ClipboardList className="w-5 h-5" />
-                                    Listas Consolidadas — {dateLabel}
+                                    Planejamento de Insumos — {dateLabel}
                                 </CardTitle>
                                 <Button
                                     variant="outline"
