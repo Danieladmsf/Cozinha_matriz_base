@@ -385,16 +385,20 @@ export default function WeeklyMenuComponent() {
               <Tabs value={mealType} onValueChange={setMealType} className="w-full max-w-3xl">
                 <TabsList className="flex w-full flex-wrap h-auto p-1 bg-gray-100/80">
                   {menuConfig?.category_groups?.length > 0 ? (
-                    menuConfig.category_groups.map(group => (
-                      <TabsTrigger
-                        key={group.id}
-                        value={group.id}
-                        className="flex items-center gap-2 flex-1 min-w-[120px]"
-                      >
-                        <div className="w-2 h-2 rounded-full bg-blue-400" />
-                        {group.name}
-                      </TabsTrigger>
-                    ))
+                    menuConfig.category_groups.map(group => {
+                      const originalCat = categories.find(c => c.name === group.name);
+                      const groupColor = originalCat ? getCategoryColor(originalCat.id) : "#60a5fa"; // blue-400 fallback
+                      return (
+                        <TabsTrigger
+                          key={group.id}
+                          value={group.id}
+                          className="flex items-center gap-2 flex-1 min-w-[120px]"
+                        >
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: groupColor }} />
+                          {group.name}
+                        </TabsTrigger>
+                      );
+                    })
                   ) : (
                     <div className="w-full py-2 text-center text-gray-500 text-sm">
                       Nenhuma aba configurada. Vá em Configurações → Layout para criar abas.

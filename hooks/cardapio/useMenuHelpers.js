@@ -42,10 +42,25 @@ export const useMenuHelpers = () => {
   }, []);
 
   const getCategoryColor = useCallback((categoryId, categories, menuConfig) => {
-    const category = categories?.find(c => c.id === categoryId);
-    const configColor = menuConfig?.category_colors?.[categoryId];
-    const categoryColor = category?.color;
-    return configColor || categoryColor || '#6B7280';
+    let currentCategoryId = categoryId;
+    let category = categories?.find(c => c.id === currentCategoryId);
+    
+    let configColor = menuConfig?.category_colors?.[currentCategoryId];
+    if (configColor) return configColor;
+    if (category?.color) return category.color;
+
+    let safetyCounter = 0;
+    while (category?.parent_id && safetyCounter < 10) {
+      currentCategoryId = category.parent_id;
+      category = categories?.find(c => c.id === currentCategoryId);
+      configColor = menuConfig?.category_colors?.[currentCategoryId];
+      
+      if (configColor) return configColor;
+      if (category?.color) return category.color;
+      safetyCounter++;
+    }
+
+    return '#6B7280';
   }, []);
 
   // Função auxiliar para obter todos os nomes de subcategorias recursivamente
