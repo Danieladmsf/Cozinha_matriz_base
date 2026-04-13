@@ -168,19 +168,6 @@ export const useMenuData = (currentDate) => {
     try {
       const mockUserId = APP_CONSTANTS.MOCK_USER_ID;
 
-      // ...rest of function
-
-      // Adicionar log se encontrar config "fantasma"
-      if (configs && configs.length > 0) {
-        const config = configs[0];
-        // SE encontrar abas proibidas vindo do banco (ou cache do banco), avisar e sugerir limpeza
-        if (config.category_groups && config.category_groups.some(g => g.name === 'Menu diário' || g.name === 'Almoço')) {
-          console.error('🚨 [useMenuData] DETECTADO DADO FANTASMA (Firestore Persistence)!');
-          console.error('🚨 [useMenuData] Execute nukeFirestoreCache() no console ou limpe os dados do site.');
-          // Opcional: Auto-nuke? Talvez perigoso de fazer loop. Melhor expor a função.
-        }
-        // ...
-      }
 
       // Primeiro tenta carregar do cache local se existir e for recente
       const cachedConfig = localStorage.getItem('menuConfig_v2');

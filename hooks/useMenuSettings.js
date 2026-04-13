@@ -112,6 +112,10 @@ export const useMenuSettings = () => {
           setActiveCategories(initialActiveState);
           console.log('useMenuSettings: loadConfig - initial active state:', initialActiveState);
         }
+
+        // Notificar useMenuData (em outros componentes como ClientMenuComponent) que o config foi carregado
+        localStorage.setItem('menuConfig_v2', JSON.stringify(config));
+        window.dispatchEvent(new CustomEvent('menuConfigUpdated', { detail: config }));
       } else {
         await createDefaultConfig(categoryTreeData);
       }
