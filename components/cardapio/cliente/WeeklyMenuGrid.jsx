@@ -70,14 +70,36 @@ export default function WeeklyMenuGrid({
       overflow: 'visible'
     }}>
       {availableDays.map(day => {
-        const dayDate = addDays(weekStart, day);
-        const dayItems = weeklyMenu?.menu_data[day] || {};
+        // Agregar dados de TODOS os grupos (mealTypes) para este dia
+        // Estrutura: menu_data[mealType][dayIndex][categoryId] = [items]
+        let dayItems = {};
+        if (weeklyMenu?.menu_data) {
+          Object.keys(weeklyMenu.menu_data).forEach(mealType => {
+            const mealData = weeklyMenu.menu_data[mealType];
+            // Pula chaves internas (ex: _metadata)
+            if (typeof mealData !== 'object' || mealType.startsWith('_')) return;
+            const dayData = mealData?.[day];
+            if (dayData && typeof dayData === 'object') {
+              Object.keys(dayData).forEach(categoryId => {
+                if (!dayItems[categoryId]) {
+                  dayItems[categoryId] = [];
+                }
+                const items = dayData[categoryId];
+                if (Array.isArray(items)) {
+                  dayItems[categoryId] = [...dayItems[categoryId], ...items];
+                }
+              });
+            }
+          });
+        }
 
         console.log(`📅 [WeeklyMenuGrid] Dia ${day} (${DAY_NAMES_FULL[day]}):`, {
-          temDados: !!weeklyMenu?.menu_data?.[day],
+          temDados: Object.keys(dayItems).length > 0,
           categorias: Object.keys(dayItems).length,
           dayItems
         });
+
+        const dayDate = addDays(weekStart, day);
 
         return (
           <div key={day} style={{
@@ -100,7 +122,7 @@ export default function WeeklyMenuGrid({
 
             <div style={{ flex: 1, overflow: 'visible' }}>
               {activeCategories.map((category, categoryIndex) => {
-                const items = dayItems[category.id] ? Object.values(dayItems[category.id]) : [];
+                const items = Array.isArray(dayItems[category.id]) ? dayItems[category.id] : [];
                 const filteredItems = selectedCustomer?.id === 'all'
                   ? items
                   : getFilteredItemsForClient(items, category.id, selectedCustomer?.id);
