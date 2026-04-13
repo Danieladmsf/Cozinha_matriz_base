@@ -467,33 +467,6 @@ const RecipeTaskConfig = ({ recipes = [], activeRecipeIds = new Set(), menuRecip
 
     return (
         <div className="space-y-4">
-            {/* Stats Bar */}
-            <Card className="border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-gray-50">
-                <CardContent className="py-4 px-6">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div className="flex items-center gap-3">
-                            <ChefHat className="w-5 h-5 text-slate-600" />
-                            <span className="font-semibold text-gray-800">
-                                Progresso da Configuração
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-40 bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                                <div
-                                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${configStats.percentage}%` }}
-                                />
-                            </div>
-                            <Badge className="bg-slate-100 text-slate-700 text-sm px-3 py-1">
-                                {configStats.configured} / {configStats.total} receitas
-                            </Badge>
-                            <Badge className="bg-emerald-100 text-emerald-700 text-sm font-bold px-3 py-1">
-                                {configStats.percentage}%
-                            </Badge>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
 
             {/* Search + Filter */}
             <div className="flex items-center gap-3">
