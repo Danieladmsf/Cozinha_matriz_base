@@ -85,6 +85,7 @@ const IngredientTable = ({
                   return;
                 }
 
+                const subComponents = prep.sub_components || [];
                 const unitLabel = prep.assembly_config?.unit_type === 'kg' ? 'kg' : 'unidades';
                 // Removido o window.confirm para auto-scale transparente e fluido
 
