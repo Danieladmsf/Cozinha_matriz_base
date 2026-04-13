@@ -407,33 +407,45 @@ const RecipeTaskConfig = ({ recipes = [], activeRecipeIds = new Set(), menuRecip
         if (!recipe?.preparations) return;
 
         const targetRecipeId = recipe.base_recipe_id || recipe.id;
-        const newMapSegment = {};
 
-        for (let prepIdx = 0; prepIdx < recipe.preparations.length; prepIdx++) {
-            const prep = recipe.preparations[prepIdx];
-            if (!prep.ingredients) continue;
-            for (let ingIdx = 0; ingIdx < prep.ingredients.length; ingIdx++) {
-                const key = `${targetRecipeId}-${prepIdx}-${ingIdx}`;
-                const ing = prep.ingredients[ingIdx];
+        // Usar functional update para garantir estado mais recente (sem race condition)
+        setLocalTaskMap(prev => {
+            const newMap = { ...prev };
+            const backendUpdates = [];
 
-                if (taskType === null) {
-                    newMapSegment[key] = [];
-                    updateIngredientTaskType(targetRecipeId, prepIdx, ingIdx, null);
-                } else {
-                    const current = localTaskMap[key] || (Array.isArray(ing.task_type) ? [...ing.task_type] : (ing.task_type ? [ing.task_type] : []));
-                    if (!current.includes(taskType)) {
-                        const updated = [...current, taskType];
-                        newMapSegment[key] = updated;
-                        updateIngredientTaskType(targetRecipeId, prepIdx, ingIdx, updated);
+            for (let prepIdx = 0; prepIdx < recipe.preparations.length; prepIdx++) {
+                const prep = recipe.preparations[prepIdx];
+                if (!prep.ingredients) continue;
+                for (let ingIdx = 0; ingIdx < prep.ingredients.length; ingIdx++) {
+                    const key = `${targetRecipeId}-${prepIdx}-${ingIdx}`;
+                    const ing = prep.ingredients[ingIdx];
+
+                    if (taskType === null) {
+                        // Limpar: setar como vazio
+                        newMap[key] = [];
+                        backendUpdates.push({ prepIdx, ingIdx, value: null });
+                    } else {
+                        // Adicionar: ler do estado ATUALIZADO (prev), não do closure stale
+                        const current = newMap[key] || prev[key] || (Array.isArray(ing.task_type) ? [...ing.task_type] : (ing.task_type ? [ing.task_type] : []));
+                        if (!current.includes(taskType)) {
+                            const updated = [...current, taskType];
+                            newMap[key] = updated;
+                            backendUpdates.push({ prepIdx, ingIdx, value: updated });
+                        }
                     }
                 }
             }
-        }
 
-        // Fast local bulk update
-        if (Object.keys(newMapSegment).length > 0) {
-            setLocalTaskMap(prev => ({ ...prev, ...newMapSegment }));
-        }
+            // Disparar chamadas ao backend APÓS montar o mapa completo
+            // usando setTimeout para não bloquear o state update
+            setTimeout(() => {
+                backendUpdates.forEach(({ prepIdx, ingIdx, value }) => {
+                    updateIngredientTaskType(targetRecipeId, prepIdx, ingIdx, value);
+                });
+            }, 0);
+
+            return newMap;
+        });
     };
 
     // Category column config
