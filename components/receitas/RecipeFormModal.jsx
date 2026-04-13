@@ -35,9 +35,22 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe
     }, [isOpen, editingRecipe]);
 
     // Filtrar categorias do tipo ativo (receitas)
+    const normalizeType = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+            'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+            'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+            'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+    };
+
     const availableCategories = fullCategoryTree
-        .filter(c => c.type === activeType && c.level === 1 && c.active !== false)
+        .filter(c => normalizeType(c.type) === normalizeType(activeType) && c.level === 1 && c.active !== false)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // Debug for when fullCategoryTree has elements but they don't match
+    // console.log('[RecipeFormModal] Tree:', fullCategoryTree.map(c=>c.name), 'Available:', availableCategories.map(c=>c.name));
 
     // Função para gerar código único de receita garantindo sequencial global
     const generateRecipeCode = (recipeName, allCodes = []) => {
