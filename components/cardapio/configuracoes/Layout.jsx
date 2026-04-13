@@ -99,19 +99,6 @@ const LayoutTab = ({
           items: childrenIds
         };
 
-        // Auto-expandir todos os filhos para que venham "ligados" por padrão
-        if (setExpandedCategories && childrenIds.length > 0) {
-          setExpandedCategories(prev => {
-            const newExpanded = [...prev];
-            childrenIds.forEach(id => {
-              if (!newExpanded.includes(id)) {
-                newExpanded.push(id);
-              }
-            });
-            return newExpanded;
-          });
-        }
-
         setCategoryGroups([...(categoryGroups || []), newGroup]);
       }
       return;
