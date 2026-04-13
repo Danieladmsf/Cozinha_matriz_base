@@ -22,7 +22,8 @@ const LayoutTab = ({
   toggleExpandedCategory,
   updateFixedDropdowns,
   setCategoryOrder,
-  setCategoryGroups
+  setCategoryGroups,
+  setExpandedCategories
 }) => {
   const [editingGroupId, setEditingGroupId] = React.useState(null);
   const [editingName, setEditingName] = React.useState("");
@@ -97,6 +98,19 @@ const LayoutTab = ({
           name: category.name, // Default to category name
           items: childrenIds
         };
+
+        // Auto-expandir todos os filhos para que venham "ligados" por padrão
+        if (setExpandedCategories && childrenIds.length > 0) {
+          setExpandedCategories(prev => {
+            const newExpanded = [...prev];
+            childrenIds.forEach(id => {
+              if (!newExpanded.includes(id)) {
+                newExpanded.push(id);
+              }
+            });
+            return newExpanded;
+          });
+        }
 
         setCategoryGroups([...(categoryGroups || []), newGroup]);
       }

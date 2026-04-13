@@ -225,6 +225,7 @@ export default function MenuSettingsComponent() {
                 updateFixedDropdowns={updateFixedDropdowns}
                 setCategoryOrder={setCategoryOrder}
                 setCategoryGroups={setCategoryGroups}
+                setExpandedCategories={setExpandedCategories}
               />
             </TabsContent>
 
