@@ -123,20 +123,6 @@ export default function WeeklyMenuComponent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIds]);
 
-  // Estado para controlar se já aplicamos as configurações iniciais
-  const [hasAppliedInitialConfig, setHasAppliedInitialConfig] = React.useState(false);
-
-  useEffect(() => {
-    if (menuConfig?.expanded_categories && menuConfig.expanded_categories.length > 0 && !hasAppliedInitialConfig) {
-      menuConfig.expanded_categories.forEach(categoryId => {
-        if (!menuInterface.isLocationVisible(categoryId)) {
-          menuInterface.toggleLocationVisibility(categoryId);
-        }
-      });
-      setHasAppliedInitialConfig(true);
-    }
-  }, [menuConfig?.expanded_categories, hasAppliedInitialConfig]);
-
 
 
   // Handlers e funções utilitárias - Otimizado para não recarregar tudo
