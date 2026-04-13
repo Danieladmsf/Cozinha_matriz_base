@@ -414,9 +414,9 @@ export default function RecipeTechnicalPrintDialog({
           printContent += `<tr><td colspan="4" class="empty-state">Nenhum item para montagem</td></tr>`;
         } else {
           prep.sub_components.forEach(sc => {
-            const yieldWeight = RecipeCalculator.parseNumericValue(sc.yield_weight);
-            const inputWeight = RecipeCalculator.parseNumericValue(sc.input_yield_weight);
-            const totalCost = RecipeCalculator.parseNumericValue(sc.total_cost) || 0;
+            const yieldWeight = RecipeCalculator.parseValue(sc.yield_weight);
+            const inputWeight = RecipeCalculator.parseValue(sc.input_yield_weight);
+            const totalCost = RecipeCalculator.parseValue(sc.total_cost) || 0;
             const yieldPercent = inputWeight > 0 ? (yieldWeight / inputWeight) * 100 : 100;
             const yieldClass = yieldPercent >= 95 ? 'percentage-good' : yieldPercent >= 85 ? 'percentage-warning' : 'percentage-bad';
             printContent += `
@@ -450,9 +450,9 @@ export default function RecipeTechnicalPrintDialog({
           printContent += `<tr><td colspan="6" class="empty-state">Nenhum produto para porcionar</td></tr>`;
         } else {
           prep.sub_components.forEach(sc => {
-            const inputWeight = RecipeCalculator.parseNumericValue(sc.input_yield_weight);
-            const portionedWeight = RecipeCalculator.parseNumericValue(sc.weight_portioned) || inputWeight;
-            const totalCost = RecipeCalculator.parseNumericValue(sc.total_cost) || 0;
+            const inputWeight = RecipeCalculator.parseValue(sc.input_yield_weight);
+            const portionedWeight = RecipeCalculator.parseValue(sc.weight_portioned) || inputWeight;
+            const totalCost = RecipeCalculator.parseValue(sc.total_cost) || 0;
             const portioningLoss = inputWeight > 0 && portionedWeight >= 0 ? ((inputWeight - portionedWeight) / inputWeight) * 100 : 0;
             const yieldPercent = inputWeight > 0 ? (portionedWeight / inputWeight) * 100 : 100;
             const lossClass = portioningLoss <= 2 ? 'percentage-good' : portioningLoss <= 5 ? 'percentage-warning' : 'percentage-bad';
@@ -509,14 +509,15 @@ export default function RecipeTechnicalPrintDialog({
           printContent += `<tr><td colspan="${colCount}" class="empty-state">Nenhum ingrediente</td></tr>`;
         } else {
           prep.ingredients.forEach(ing => {
-            const thawingLoss = RecipeCalculator.calculateThawingLoss(ing);
-            const cleaningLoss = RecipeCalculator.calculateCleaningLoss(ing);
-            const cookingLoss = RecipeCalculator.calculateCookingLoss(ing);
-            const portioningLossIng = RecipeCalculator.calculatePortioningLoss(ing);
-            const yieldPercent = RecipeCalculator.calculateItemYieldPercent(ing);
-            const netPrice = RecipeCalculator.calculateItemNetPricePerKg(ing);
-            const ingredientCost = RecipeCalculator.parseNumericValue(ing.total_cost) || 0;
-            const currentPrice = RecipeCalculator.parseNumericValue(ing.current_price) || 0;
+            const currentPrice = RecipeCalculator.parseValue(ing.current_price) || 0;
+            const yieldPercent = RecipeCalculator.calculateIngredientYield(ing, prep.processes);
+            const netPrice = yieldPercent > 0 ? currentPrice / (yieldPercent / 100) : currentPrice;
+            const ingredientCost = RecipeCalculator.parseValue(ing.total_cost) || 0;
+
+            const thawingLoss = RecipeCalculator.calculateLoss(ing.weight_frozen, ing.weight_thawed);
+            const cleaningLoss = RecipeCalculator.calculateLoss(hasDefrosting ? (ing.weight_thawed || ing.weight_raw) : ing.weight_raw, ing.weight_clean);
+            const cookingLoss = RecipeCalculator.calculateLoss(ing.weight_pre_cooking || ing.weight_clean || ing.weight_thawed || ing.weight_raw, ing.weight_cooked);
+            const portioningLossIng = RecipeCalculator.calculateLoss(ing.weight_cooked || ing.weight_clean || ing.weight_thawed || ing.weight_raw, ing.weight_portioned);
 
             const thawingClass = thawingLoss <= 5 ? 'percentage-good' : thawingLoss <= 10 ? 'percentage-warning' : 'percentage-bad';
             const cleaningClass = cleaningLoss <= 10 ? 'percentage-good' : cleaningLoss <= 15 ? 'percentage-warning' : 'percentage-bad';
