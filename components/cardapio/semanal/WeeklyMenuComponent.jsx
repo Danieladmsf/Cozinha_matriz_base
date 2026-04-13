@@ -370,41 +370,45 @@ export default function WeeklyMenuComponent() {
             </div>
 
             {/* Tabs Dinâmicas baseadas em Grupos */}
-            <div className="flex justify-center mt-4 flex-col items-center gap-2">
+            <div className="mt-6 mb-4">
               {menuConfig?.category_groups?.some(g => g.name === 'Menu diário' || g.name === 'Almoço') && (
-                <button
-                  onClick={() => {
-                    const { nukeFirestoreCache } = require('@/hooks/cardapio/useMenuData').useMenuData(menuInterface.currentDate);
-                    nukeFirestoreCache();
-                  }}
-                  className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold animate-pulse"
-                >
-                  ☢️ DADOS ANTIGOS DETECTADOS! CLIQUE AQUI PARA LIMPAR
-                </button>
+                <div className="flex justify-center mb-4">
+                  <button
+                    onClick={() => {
+                      const { nukeFirestoreCache } = require('@/hooks/cardapio/useMenuData').useMenuData(menuInterface.currentDate);
+                      nukeFirestoreCache();
+                    }}
+                    className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 font-bold animate-pulse"
+                  >
+                    ☢️ DADOS ANTIGOS DETECTADOS! CLIQUE AQUI PARA LIMPAR
+                  </button>
+                </div>
               )}
-              <Tabs value={mealType} onValueChange={setMealType} className="w-full max-w-3xl">
-                <TabsList className="flex w-full flex-wrap h-auto p-1 bg-gray-100/80">
-                  {menuConfig?.category_groups?.length > 0 ? (
-                    menuConfig.category_groups.map(group => {
-                      const originalCat = categories.find(c => c.name === group.name);
-                      const groupColor = originalCat ? getCategoryColor(originalCat.id) : "#60a5fa"; // blue-400 fallback
-                      return (
-                        <TabsTrigger
-                          key={group.id}
-                          value={group.id}
-                          className="flex items-center gap-2 flex-1 min-w-[120px]"
-                        >
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: groupColor }} />
-                          {group.name}
-                        </TabsTrigger>
-                      );
-                    })
-                  ) : (
-                    <div className="w-full py-2 text-center text-gray-500 text-sm">
-                      Nenhuma aba configurada. Vá em Configurações → Layout para criar abas.
-                    </div>
-                  )}
-                </TabsList>
+              <Tabs value={mealType} onValueChange={setMealType} className="w-full">
+                <div className="overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
+                  <TabsList className="inline-flex h-auto p-1 bg-slate-100/80 rounded-xl justify-start min-w-max">
+                    {menuConfig?.category_groups?.length > 0 ? (
+                      menuConfig.category_groups.map(group => {
+                        const originalCat = categories.find(c => c.name === group.name);
+                        const groupColor = originalCat ? getCategoryColor(originalCat.id) : "#60a5fa"; // blue-400 fallback
+                        return (
+                          <TabsTrigger
+                            key={group.id}
+                            value={group.id}
+                            className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600 hover:text-slate-900"
+                          >
+                            <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: groupColor }} />
+                            {group.name}
+                          </TabsTrigger>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-2 text-slate-500 text-sm">
+                        Nenhuma aba configurada. Vá em Configurações → Layout para criar abas.
+                      </div>
+                    )}
+                  </TabsList>
+                </div>
               </Tabs>
             </div>
           </div>
