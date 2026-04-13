@@ -3,7 +3,7 @@
 import React from 'react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { renderFormattedRecipeName } from '@/lib/textHelpers';
+import { renderFormattedRecipeName, getRecipeYieldDescription } from '@/lib/textHelpers';
 import { useLocationSelection } from '@/hooks/cardapio/useLocationSelection';
 import { useAvailableDays, DAY_NAMES_FULL } from '@/hooks/useAvailableDays';
 
@@ -139,6 +139,11 @@ export default function WeeklyMenuGrid({
                             }}>
                               {renderFormattedRecipeName(recipe.name)}
                             </div>
+                            {getRecipeYieldDescription(recipe) && (
+                              <div style={{ fontSize: '8.5px', color: '#666', fontStyle: 'italic', marginBottom: '2px', lineHeight: '1.1' }}>
+                                {getRecipeYieldDescription(recipe)}
+                              </div>
+                            )}
                             {selectedCustomer?.id === 'all' && getUncheckedClients(item).length > 0 && (
                               <div style={{
                                 fontSize: '8px',
