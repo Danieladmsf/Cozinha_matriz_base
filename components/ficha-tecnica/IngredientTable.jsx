@@ -207,6 +207,7 @@ const IngredientTable = ({
         {/* 2. Tabela de Componentes com Configuração no Rodapé */}
         <AssemblySubComponents
           subComponents={prep.sub_components || []}
+          prep={prep}
           onUpdateSubComponents={(components) => {
             onUpdatePreparation(prepIndex, 'sub_components', components);
           }}

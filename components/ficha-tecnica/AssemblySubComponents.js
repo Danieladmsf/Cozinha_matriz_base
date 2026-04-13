@@ -18,6 +18,7 @@ const AssemblySubComponents = ({
   addComponentLabel = 'Adicionar Preparo/Receita',
   addComponentClassName = 'border-indigo-300 text-indigo-600 hover:bg-indigo-50',
   isProduct = false,
+  prep,
   onUpdatePreparation, // Local state update (single field)
   onBatchUpdatePreparations // Batch update for atomic multi-prep scaling
 }) => {
@@ -285,7 +286,14 @@ const AssemblySubComponents = ({
               <tr className="border-t-2 border-gray-200">
                 <td className="px-3 py-2 font-semibold text-gray-800 text-right">Total</td>
                 <td className="px-3 py-2 text-center font-bold text-indigo-700">
-                  {formatWeight(totalAssemblyWeight * 1000)}
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{formatWeight(totalAssemblyWeight * 1000)}</span>
+                    {prep?.assembly_config?.unit_type === 'un' && prep.assembly_config.units_quantity > 1 && totalAssemblyWeight > 0 && (
+                      <span className="text-[9px] text-indigo-400 font-medium whitespace-nowrap leading-none mt-0.5">
+                         ~{Math.round((totalAssemblyWeight / prep.assembly_config.units_quantity) * 1000)}g / un
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-center font-semibold text-gray-700">100,0%</td>
                 <td className="px-3 py-2 text-center font-bold text-green-700">
