@@ -132,9 +132,24 @@ export default function ProductsList() {
         }
     };
 
-    const handleDelete = async (id, name) => {
-        if (window.confirm(`Tem certeza que deseja excluir o produto comercial "${name}"?`)) {
-            await deleteProduct(id);
+    const handleDelete = async (product) => {
+        if (window.confirm(`Tem certeza que deseja excluir o produto comercial "${product.name}"?`)) {
+            try {
+                // Ao apagar o produto, deleta também a Receita Base (Ficha Técnica) gerada automaticamente para ele
+                const linkedRecipes = await Recipe.query([{ field: 'source_product_id', operator: '==', value: product.id }]);
+                for (const r of linkedRecipes) {
+                    await Recipe.delete(r.id);
+                }
+                
+                // Backup: deletar usando a referência reversa caso falhe a query de source_product_id
+                const recipeId = product.recipe_link_id || product.components?.[0]?.recipe_id;
+                if (recipeId) {
+                    await Recipe.delete(recipeId);
+                }
+            } catch (e) {
+                console.error("Erro ao limpar ficha técnica vinculada ao produto:", e);
+            }
+            await deleteProduct(product.id);
         }
     };
 
@@ -590,7 +605,7 @@ export default function ProductsList() {
                                                         </DropdownMenuItem>
 
                                                         <DropdownMenuItem
-                                                            onClick={() => handleDelete(product.id, product.name)}
+                                                            onClick={() => handleDelete(product)}
                                                             className="flex items-center text-red-600 focus:text-red-600 cursor-pointer"
                                                         >
                                                             <Trash className="mr-2 h-4 w-4" />
