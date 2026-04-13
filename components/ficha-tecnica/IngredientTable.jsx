@@ -98,7 +98,7 @@ const IngredientTable = ({
                   const currentWeight = parseNumericValue(sc.assembly_weight_kg) || 0;
                   return {
                     ...sc,
-                    assembly_weight_kg: (currentWeight * factor).toFixed(5).replace('.', ',')
+                    assembly_weight_kg: Number((currentWeight * factor).toFixed(4)).toString().replace('.', ',')
                   };
                 });
 
