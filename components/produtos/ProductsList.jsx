@@ -199,14 +199,24 @@ export default function ProductsList() {
         // 0. Filter by Active Type (The main tab)
         // Products are associated with exactly ONE category. So we find which ones belong to `activeType`.
         // If a product has no category, we can show it in the default 'produtos' tab, or 'Todas'
-        const typeCategories = fullCategoryTree.filter(c => c.type === activeType);
+        const normalizeType = (t) => {
+            const raw = (t || '').toLowerCase().trim();
+            const aliases = {
+                'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+                'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+                'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+            };
+            return aliases[raw] || raw || 'receitas';
+        };
+
+        const typeCategories = fullCategoryTree.filter(c => normalizeType(c.type) === normalizeType(activeType));
         const typeCategoryNames = typeCategories.map(c => c.name);
         const typeCategoryIds = typeCategories.map(c => c.id);
 
         filtered = filtered.filter(p => {
             if (!p.category && !p.category_id) {
                 // If it has no category, only show it if we are in the default "produtos" tab.
-                return activeType === 'produtos';
+                return normalizeType(activeType) === 'produtos';
             }
             return (
                 (p.category_id && typeCategoryIds.includes(p.category_id)) ||

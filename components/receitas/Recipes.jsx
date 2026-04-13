@@ -170,8 +170,18 @@ export default function Recipes() {
         setFullCategoryTree(allCategories);
       }
 
+      const normalizeType = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+          'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+          'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+          'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+      };
+
       const recipeCategories = allCategories
-        .filter(cat => cat.type === activeType && cat.active !== false && cat.level === 1)
+        .filter(cat => normalizeType(cat.type) === normalizeType(activeType) && cat.active !== false && cat.level === 1)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
       if (recipeCategories.length > 0) {
@@ -395,8 +405,17 @@ export default function Recipes() {
   };
 
   // Helper to find root category type
-  // Agora usa category_id da receita (se disponível) para busca direta
   const getRootCategoryType = (categoryName, categoryId = null) => {
+    const normalizeType = (t) => {
+      const raw = (t || '').toLowerCase().trim();
+      const aliases = {
+        'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+        'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+        'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+      };
+      return aliases[raw] || raw || 'receitas';
+    };
+
     // Busca por ID primeiro (mais confiável)
     if (categoryId) {
       const catById = fullCategoryTree.find(c => c.id === categoryId);
@@ -410,7 +429,7 @@ export default function Recipes() {
           if (parent) node = parent;
           else break;
         }
-        return node?.type || 'receitas';
+        return normalizeType(node?.type);
       }
     }
 
@@ -431,7 +450,7 @@ export default function Recipes() {
       else break;
     }
 
-    return node ? (node.type || 'receitas') : 'receitas';
+    return normalizeType(node ? node.type : null);
   };
 
   // Helper to get all descendant names
@@ -452,17 +471,42 @@ export default function Recipes() {
     // Filtrar por tipos visíveis — items de tipos desabilitados nunca aparecem
     const hasVisibilityConfig = Object.keys(visibleTypes).length > 0;
     if (hasVisibilityConfig) {
+      const normalizeTypeLocal = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+          'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+          'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+          'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+      };
+
+      const normalizedVisibleTypes = Object.keys(visibleTypes).reduce((acc, key) => {
+        if (visibleTypes[key]) acc[normalizeTypeLocal(key)] = true;
+        return acc;
+      }, {});
+
       filtered = filtered.filter(recipe => {
         const type = getRootCategoryType(recipe.category, recipe.category_id);
-        return visibleTypes[type] === true;
+        return normalizedVisibleTypes[type] === true;
       });
     }
 
     // If NOT searching, filter by activeType tab
     if (!searchTerm) {
+      const normalizeType = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+          'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+          'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+          'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+      };
+
       filtered = filtered.filter(recipe => {
         const type = getRootCategoryType(recipe.category, recipe.category_id);
-        return type === activeType;
+        return type === normalizeType(activeType);
       });
     }
 
@@ -555,12 +599,22 @@ export default function Recipes() {
   const handleCreateRecipe = async (formData) => {
     try {
       const selectedCat = fullCategoryTree.find(c => c.name === formData.category && c.level === 1);
+      const normalizeType = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+          'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+          'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+          'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+      };
+
       const recipeData = {
         name: formData.name,
         code: formData.code, // O código gerado já vem preenchido do modal
         category: formData.category || '',
         category_id: selectedCat?.id || '',
-        type: activeType,
+        type: normalizeType(activeType),
         active: true,
         total_weight: 0,
         yield_weight: 0,

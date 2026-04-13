@@ -130,9 +130,17 @@ export function useRecipeCategorization({
 
     const getSelectedCategoryLabel = useCallback(() => {
         if (!recipeData.category) return "Selecione a categoria";
-        const found = groupedCategories.flatMap(g => g.items).find(c => c.originalName === recipeData.category);
+        const allItems = groupedCategories.flatMap(g => g.items);
+        // Priorizar busca por category_id (único) para evitar conflito de nomes duplicados
+        let found = null;
+        if (recipeData.category_id) {
+            found = allItems.find(c => c.id === recipeData.category_id);
+        }
+        if (!found) {
+            found = allItems.find(c => c.originalName === recipeData.category);
+        }
         return found ? found.label : recipeData.category;
-    }, [recipeData.category, groupedCategories]);
+    }, [recipeData.category, recipeData.category_id, groupedCategories]);
 
     const handleSmartCategorySelect = useCallback((originalName) => {
         handleCategoryChange(originalName);
