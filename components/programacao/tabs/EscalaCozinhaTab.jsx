@@ -43,7 +43,7 @@ function formatWeight(weightKg) {
  * 2 sub-modos: Configuração (mapear receitas) e Relatório (listas do dia).
  */
 const EscalaCozinhaTab = () => {
-    const [mode, setMode] = useState('report'); // 'config' | 'report'
+    const [mode, setMode] = useState('pre_preparo_list'); // 'pre_preparo_list' | 'config'
     const [printing, setPrinting] = useState(false);
     const [selectedDay, setSelectedDay] = useState(1);
     const { categories, getCategoryInfo } = useCategoryDisplay();
@@ -571,14 +571,7 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
 
             {/* Mode Switcher */}
             <Tabs value={mode} onValueChange={setMode}>
-                <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 p-1 rounded-lg">
-                    <TabsTrigger
-                        value="report"
-                        className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:border-gray-900 border border-transparent hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-sm"
-                    >
-                        <BarChart3 className="w-4 h-4" />
-                        Relatório do Dia
-                    </TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1 rounded-lg">
                     <TabsTrigger
                         value="pre_preparo_list"
                         className="flex items-center gap-2 data-[state=active]:bg-gray-800 data-[state=active]:text-white data-[state=active]:border-gray-900 border border-transparent hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 text-sm"
@@ -594,72 +587,6 @@ Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { loc
                         Configuração de Receitas
                     </TabsTrigger>
                 </TabsList>
-
-                {/* REPORT MODE */}
-                <TabsContent value="report" className="mt-6 space-y-6">
-                    {/* Summary header */}
-                    <Card className="border border-gray-200 bg-white">
-                        <CardHeader className="py-3">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                                <CardTitle className="flex items-center gap-2 text-gray-800 text-base uppercase tracking-wide">
-                                    <ChefHat className="w-5 h-5" />
-                                    Escala Cozinha — {dateLabel}
-                                </CardTitle>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePrint()}
-                                    disabled={printing}
-                                    className="gap-2 border-gray-300 text-gray-600 hover:bg-gray-50"
-                                >
-                                    {printing ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Printer className="w-4 h-4" />
-                                    )}
-                                    Imprimir Tudo
-                                </Button>
-                            </div>
-                        </CardHeader>
-                    </Card>
-
-                    {/* Task sections — all grouped */}
-                    {renderGroupedSection('rendimento')}
-                    {renderGroupedSection('pre_preparo')}
-                    {renderGroupedSection('processamento')}
-                    {renderGroupedSection('sem_categoria')}
-
-                    {/* Total footer */}
-                    {(() => {
-                        const flatKeys = ['rendimento', 'pre_preparo', 'processamento', 'sem_categoria'];
-                        const totalAllItems = flatKeys.reduce(
-                            (sum, k) => sum + (taskReports[k]?.length || 0), 0
-                        );
-                        const totalAllWeight = flatKeys.reduce(
-                            (sum, k) => sum + (taskReports[k] || []).reduce((s, i) => s + i.totalWeight, 0), 0
-                        );
-                        if (totalAllItems === 0) return null;
-                        return (
-                            <Card className="border border-gray-300 bg-gray-50">
-                                <CardContent className="py-3 px-6">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                                            Total Geral
-                                        </span>
-                                        <div className="flex items-center gap-4">
-                                            <span className="text-xs text-gray-500">
-                                                {totalAllItems} ingredientes
-                                            </span>
-                                            <span className="text-lg font-bold text-gray-900 tabular-nums">
-                                                {formatWeight(totalAllWeight)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })()}
-                </TabsContent>
 
                 {/* LISTAS CONSOLIDADAS MODE */}
                 <TabsContent value="pre_preparo_list" className="mt-6 flex flex-col gap-6">
