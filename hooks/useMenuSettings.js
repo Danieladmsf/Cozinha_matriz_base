@@ -177,19 +177,8 @@ export const useMenuSettings = () => {
         setConfigId(newConfig.id);
       }
 
-      // Atualizar localStorage - usar mesmo formato do banco (snake_case)
-      const menuConfigForCache = {
-        expanded_categories: configData.expanded_categories,
-        category_colors: configData.category_colors,
-        fixed_dropdowns: configData.fixed_dropdowns,
-        available_days: configData.available_days,
-        available_days: configData.available_days,
-        category_order: configData.category_order,
-        category_groups: configData.category_groups,
-        active_categories: configData.active_categories,
-        selected_main_categories: configData.selected_main_categories
-      };
-      localStorage.setItem('menuConfig', JSON.stringify(menuConfigForCache));
+      localStorage.setItem('menuConfig_v2', JSON.stringify(configData)); // Use configData diretamente que já está no formato correto
+      window.dispatchEvent(new CustomEvent('menuConfigUpdated', { detail: configData }));
 
       return true;
     } catch (error) {

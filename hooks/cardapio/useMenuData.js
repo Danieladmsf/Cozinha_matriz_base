@@ -392,9 +392,26 @@ export const useMenuData = (currentDate) => {
         refreshMenuConfig();
       }
     };
+    
+    const handleLocalConfigChange = (e) => {
+      if (e.detail) {
+        setMenuConfig(e.detail);
+        notifyCacheUpdate('menuConfig', e.detail);
+        if (globalCache) {
+          globalCache.menuConfig = e.detail;
+        }
+      } else {
+        refreshMenuConfig();
+      }
+    };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('menuConfigUpdated', handleLocalConfigChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('menuConfigUpdated', handleLocalConfigChange);
+    };
   }, []);
 
   return {
