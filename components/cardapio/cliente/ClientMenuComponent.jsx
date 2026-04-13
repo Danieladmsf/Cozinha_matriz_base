@@ -59,6 +59,23 @@ export default function ClientMenuComponent() {
 
   // Funções utilitárias
   const getActiveCategories = useMemo(() => {
+    // Se temos category_groups configurados, usar os itens dos grupos (nível 2)
+    // Isso garante que mostramos as mesmas categorias do painel de Produção Semanal
+    if (menuConfig?.category_groups && menuConfig.category_groups.length > 0) {
+      const allGroupItems = menuConfig.category_groups.flatMap(g => g.items || []);
+      const uniqueItemIds = [...new Set(allGroupItems)];
+      let cats = uniqueItemIds
+        .map(id => categories.find(c => c.id === id))
+        .filter(Boolean)
+        .filter(cat => menuConfig.active_categories?.[cat.id] !== false);
+
+      if (selectedCustomer && selectedCustomer.id !== 'all') {
+        cats = applyClientConfig(cats, selectedCustomer.id);
+      }
+      return cats;
+    }
+
+    // Fallback para comportamento legado (categorias nível 1)
     let activeCategories = menuHelpers.getActiveCategories(categories, menuConfig);
 
     if (selectedCustomer && selectedCustomer.id !== 'all') {
