@@ -12,6 +12,7 @@ import { useMenuHelpers } from '@/hooks/cardapio/useMenuHelpers';
 import { usePrintMenu } from '@/hooks/cardapio/usePrintMenu';
 import { useMenuLocations } from '@/hooks/cardapio/useMenuLocations';
 import { useMenuInterface } from '@/hooks/cardapio/useMenuInterface';
+import { useAvailableDays } from '@/hooks/useAvailableDays';
 
 // Componentes UI separados
 import ClientTabs from './ClientTabs';
@@ -50,6 +51,7 @@ export default function ClientMenuComponent() {
   const { applyClientConfig, getFilteredItemsForClient } = useClientConfig(menuConfig, getAllClientIds());
   const menuHelpers = useMenuHelpers();
   const { handlePrintCardapio: printMenu } = usePrintMenu();
+  const availableDays = useAvailableDays();
 
 
   // Handler de navegação - Otimizado para não recarregar tudo
@@ -125,7 +127,9 @@ export default function ClientMenuComponent() {
         locations,
         customerId,
         menuInterface.currentDate,
-        getCategoryColor
+        getCategoryColor,
+        visibleDays,
+        availableDays
       );
 
       toast({

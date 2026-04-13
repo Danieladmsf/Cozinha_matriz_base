@@ -2,59 +2,27 @@ import { useCallback } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, getWeek, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { renderFormattedRecipeName } from '@/lib/textHelpers';
-import { useLocationSelection } from './useLocationSelection';
+import { DAY_NAMES_FULL } from '@/hooks/useAvailableDays';
 
 export const usePrintMenu = () => {
-  const getDayNames = () => ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
-  
   // Função para obter clientes desmarcados de uma receita
   const getUncheckedClients = useCallback((item, locations, allClientIds) => {
     if (!item || !item.locations || !locations || !allClientIds) return [];
-    
-    // Simular o comportamento do useLocationSelection
+
     const isLocationSelected = (itemLocations, locationId) => {
-      // Estado inicial: array vazio = todos selecionados
-      if (!itemLocations || itemLocations.length === 0) {
-        return true;
-      }
-      
-      // Caso especial: marcador de "nenhum selecionado"
-      if (itemLocations.includes('__NONE_SELECTED__')) {
-        return false;
-      }
-      
-      // Verificar se contém todos os IDs válidos
+      if (!itemLocations || itemLocations.length === 0) return true;
+      if (itemLocations.includes('__NONE_SELECTED__')) return false;
       const validIds = itemLocations.filter(id => allClientIds.includes(id));
-      
-      if (validIds.length === allClientIds.length) {
-        return true; // Todos selecionados
-      } else if (validIds.length === 0) {
-        return false; // Nenhum selecionado
-      } else {
-        return itemLocations.includes(locationId); // Seleção parcial
-      }
+      if (validIds.length === allClientIds.length) return true;
+      else if (validIds.length === 0) return false;
+      else return itemLocations.includes(locationId);
     };
-    
+
     return locations.filter(location => {
       const isSelected = isLocationSelected(item.locations, location.id);
-      return !isSelected; // Retorna apenas os NÃO selecionados
+      return !isSelected;
     });
   }, []);
-
-  const formatRecipeName = useCallback((name) => {
-    if (!name) return '';
-    
-    // Remover prefixos desnecessários
-    const cleanName = name
-      .replace(/^(Receita|Recipe)\s*[-:]?\s*/i, '')
-      .replace(/\s*\(.*?\)\s*$/g, '') // Remove parênteses no final
-      .trim();
-    
-    // Capitalizar primeira letra
-    return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-  }, []);
-
-
 
   const getCustomerName = useCallback((customerId, customers, locations) => {
     const customer = customers?.find(c => c.id === customerId);
@@ -62,16 +30,36 @@ export const usePrintMenu = () => {
     return customer?.name || customer?.razao_social || location?.name || 'Cliente não encontrado';
   }, []);
 
-  const getPrintStyles = useCallback(() => {
+  // Agregar dados de todos os mealTypes para um dia específico
+  const aggregateDayItems = useCallback((weeklyMenu, day) => {
+    let dayItems = {};
+    if (weeklyMenu?.menu_data) {
+      Object.keys(weeklyMenu.menu_data).forEach(mealType => {
+        const mealData = weeklyMenu.menu_data[mealType];
+        if (typeof mealData !== 'object' || mealType.startsWith('_')) return;
+        const dayData = mealData?.[day];
+        if (dayData && typeof dayData === 'object') {
+          Object.keys(dayData).forEach(categoryId => {
+            if (!dayItems[categoryId]) dayItems[categoryId] = [];
+            const items = dayData[categoryId];
+            if (Array.isArray(items)) {
+              dayItems[categoryId] = [...dayItems[categoryId], ...items];
+            }
+          });
+        }
+      });
+    }
+    return dayItems;
+  }, []);
+
+  const getPrintStyles = useCallback((colsPerPage) => {
     return `
       @page {
         size: A4 landscape;
         margin: 15mm;
       }
       
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       
       body {
         font-size: 11px;
@@ -79,8 +67,17 @@ export const usePrintMenu = () => {
         margin: 0;
         padding: 0;
         width: 100%;
+      }
+      
+      .page-chunk {
+        page-break-after: always;
         display: flex;
         flex-direction: column;
+        min-height: 100%;
+      }
+      
+      .page-chunk:last-child {
+        page-break-after: auto;
       }
       
       .header {
@@ -98,10 +95,7 @@ export const usePrintMenu = () => {
         margin-bottom: 10px;
       }
       
-      .title {
-        font-size: 18px;
-        font-weight: bold;
-      }
+      .title { font-size: 18px; font-weight: bold; }
       
       h2 {
         font-size: 14px;
@@ -121,7 +115,6 @@ export const usePrintMenu = () => {
       
       .print-grid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
         gap: 8px;
         flex: 1;
       }
@@ -141,30 +134,10 @@ export const usePrintMenu = () => {
         flex-shrink: 0;
       }
       
-      .day-content {
-        flex: 1;
-        overflow: hidden;
-      }
-      
-      .category-section {
-        margin-bottom: 8px;
-      }
-      
-      .recipe-name {
-        font-size: 10px;
-        margin-bottom: 2px;
-        line-height: 1.2;
-      }
-      
-      .unchecked-clients {
-        font-size: 8px;
-        color: #d00;
-        text-decoration: line-through;
-        margin-left: 2px;
-        line-height: 1.1;
-      }
-      
-      
+      .day-content { flex: 1; overflow: hidden; }
+      .category-section { margin-bottom: 8px; }
+      .recipe-name { font-size: 10px; margin-bottom: 2px; line-height: 1.2; }
+      .unchecked-clients { font-size: 8px; color: #d00; text-decoration: line-through; margin-left: 2px; line-height: 1.1; }
       
       .generation-info {
         display: flex;
@@ -175,199 +148,129 @@ export const usePrintMenu = () => {
         margin: 0 auto;
       }
       
-      .brand {
-        font-weight: 600;
-        color: #333;
-      }
-      
-      .week-number {
-        font-size: 14px;
-        font-weight: 600;
-      }
-      
-      .date-range {
-        font-size: 12px;
-        color: #555;
-      }
-      
-      .client-info {
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 8px;
-      }
+      .brand { font-weight: 600; color: #333; }
+      .week-number { font-size: 14px; font-weight: 600; }
+      .date-range { font-size: 12px; color: #555; }
+      .client-info { font-size: 14px; font-weight: bold; margin-bottom: 8px; }
     `;
   }, []);
 
-  const calculateCategoryHeights = useCallback((weeklyMenu, categories, recipes, customers, locations, customerId) => {
-    if (!weeklyMenu || !categories) return {};
-
-    const dayNames = getDayNames();
-    const categoryHeights = {};
-
-    // Para cada categoria, calcular a altura necessária em cada dia
-    categories.forEach((category, categoryIndex) => {
-      let maxItemsInCategory = 0;
-      
-      dayNames.forEach((dayName, index) => {
-        const dayIndex = index + 1;
-        const dayItems = weeklyMenu?.menu_data?.[dayIndex] || {};
-        const categoryItems = dayItems[category.id] || [];
-        
-        // Filtrar por cliente se necessário
-        const filteredItems = customerId === 'all' 
-          ? categoryItems 
-          : categoryItems.filter(item => 
-              !item.locations || 
-              item.locations.length === 0 || 
-              item.locations.includes(customerId)
-            );
-
-        // Contar total de linhas necessárias (receitas + tags de clientes)
-        let totalLines = 0;
-        filteredItems.forEach(item => {
-          totalLines += 1; // linha da receita
-          if (customerId === 'all' && item.locations && item.locations.length > 0) {
-            // Estimar linhas de clientes (aprox 3 clientes por linha)
-            const clientLines = Math.ceil(item.locations.length / 3);
-            totalLines += clientLines;
-          }
-        });
-
-        maxItemsInCategory = Math.max(maxItemsInCategory, totalLines);
-      });
-
-      // Calcular altura: título (15px) + items (cada item ~8px) + padding
-      const titleHeight = 12;
-      const itemHeight = 6;
-      const padding = 5;
-      const calculatedHeight = titleHeight + (maxItemsInCategory * itemHeight) + padding;
-      
-      // Altura mínima de 25px, máxima de 80px
-      categoryHeights[categoryIndex] = Math.max(25, Math.min(80, calculatedHeight));
-    });
-
-    return categoryHeights;
-  }, [getDayNames]);
-
-  const generatePrintableMenu = useCallback((weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor) => {
+  const generatePrintableMenu = useCallback((weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor, visibleDays, availableDays) => {
     if (!weeklyMenu) return '';
 
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+    // Defaults
+    const daysToUse = availableDays || [1, 2, 3, 4, 5];
+    const daysPerPage = visibleDays || daysToUse.length;
+
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 0 });
     const weekNumber = getWeek(currentDate, { weekStartsOn: 1 });
     const year = getYear(currentDate);
-    
-    // Obter todos os IDs de clientes para a função de clientes desmarcados
+
     const allClientIds = locations?.filter(loc => loc.active !== false).map(loc => loc.id) || [];
-    
-    // Calcular alturas das categorias
-    const categoryHeights = calculateCategoryHeights(weeklyMenu, categories, recipes, customers, locations, customerId);
-    
-    // Cabeçalho
-    let html = `
-      <div class="header">
-        <div class="header-line">
-          <span class="title">Cardápio Semanal</span>
-          <span class="week-number">Semana ${weekNumber}/${year}</span>
-          <span class="date-range">${format(weekStart, 'dd/MM/yyyy', { locale: ptBR })} - ${format(weekEnd, 'dd/MM/yyyy', { locale: ptBR })}</span>
-        </div>
-        ${customerId !== 'all' ? `<div class="client-info">Cliente: ${getCustomerName(customerId, customers, locations)}</div>` : ''}
-        <div class="generation-info" style="margin-top: 5px;">
-          <span>Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-          <span class="brand">Cozinha & Afeto</span>
-        </div>
-      </div>
-    `;
 
-    // Grid de dias da semana
-    html += '<div class="print-grid">';
-    
-    const dayNames = getDayNames();
-    
-    dayNames.forEach((dayName, index) => {
-      const dayIndex = index + 1;
-      const dayDate = addDays(weekStart, index);
-      const dayItems = weeklyMenu?.menu_data?.[dayIndex] || {};
-      
-      html += `
-      <div class="print-day">
-      <div class="day-header">
-      <h2>${dayName.toUpperCase()} - ${format(dayDate, 'dd/MM/yyyy', { locale: ptBR })}</h2>
-      </div>
-      
-      <div class="day-content">
-      `;
-      
-      // Categorias do dia (TODAS as categorias para manter alinhamento)
-      categories?.forEach((category, categoryIndex) => {
-        const categoryItems = dayItems[category.id] || [];
-        
-        // Filtrar por cliente se necessário
-        const filteredItems = customerId === 'all' 
-          ? categoryItems 
-          : categoryItems.filter(item => 
-              !item.locations || 
-              item.locations.length === 0 || 
-              item.locations.includes(customerId)
-            );
-        
-        // SEMPRE mostrar a categoria (mesmo vazia) para manter alinhamento
-        html += `
-          <div class="category-section">
-            <h3>${category.name}</h3>
-            <div>
-        `;
-        
-        if (filteredItems.length > 0) {
-          filteredItems.forEach(item => {
-            const recipe = recipes?.find(r => r.id === item.recipe_id);
-            if (recipe) {
-              // Obter clientes desmarcados apenas quando "Todos os Clientes" está selecionado
-              const uncheckedClients = customerId === 'all' ? getUncheckedClients(item, locations, allClientIds) : [];
-              
-              html += `
-                <div>
-                  <div class="recipe-name">${renderFormattedRecipeName(recipe.name)}</div>
-                  ${uncheckedClients.length > 0 ? `
-                    <div class="unchecked-clients">${uncheckedClients.map(client => client.name).join(', ')}</div>
-                  ` : ''}
-                </div>
-              `;
-            }
-          });
-        } else {
-          html += '<div>-</div>';
-        }
-        
-        html += `
-            </div>
-          </div>
-        `;
-      });
-      
-      html += `
-          </div>
-        </div>
-      `;
-    });
-    
-    html += '</div>';
-    
-    // Rodapé (moved to header)
-    html += ``;
-    
-    return html;
-  }, [getDayNames, getCustomerName, calculateCategoryHeights]);
-
-  const handlePrintCardapio = useCallback((weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor) => {
-    if (!weeklyMenu) {
-      return;
+    // Agrupar dias em chunks de daysPerPage para paginação
+    const dayChunks = [];
+    for (let i = 0; i < daysToUse.length; i += daysPerPage) {
+      dayChunks.push(daysToUse.slice(i, i + daysPerPage));
     }
 
-    // Gerar estrutura HTML para impressão
-    const printContent = generatePrintableMenu(weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor);
-    
-    // Abrir janela de impressão
+    let html = '';
+
+    dayChunks.forEach((chunk) => {
+      // Cada chunk é uma "página" separada na impressão
+      html += '<div class="page-chunk">';
+
+      // Cabeçalho repetido em cada página
+      html += `
+        <div class="header">
+          <div class="header-line">
+            <span class="title">Cardápio Semanal</span>
+            <span class="week-number">Semana ${weekNumber}/${year}</span>
+            <span class="date-range">${format(weekStart, 'dd/MM/yyyy', { locale: ptBR })} - ${format(weekEnd, 'dd/MM/yyyy', { locale: ptBR })}</span>
+          </div>
+          ${customerId !== 'all' ? `<div class="client-info">Cliente: ${getCustomerName(customerId, customers, locations)}</div>` : ''}
+          <div class="generation-info" style="margin-top: 5px;">
+            <span>Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+            <span class="brand">Cozinha & Afeto</span>
+          </div>
+        </div>
+      `;
+
+      // Grid com N colunas = tamanho do chunk
+      html += `<div class="print-grid" style="grid-template-columns: repeat(${chunk.length}, 1fr);">`;
+
+      chunk.forEach(day => {
+        const dayDate = addDays(weekStart, day);
+        const dayItems = aggregateDayItems(weeklyMenu, day);
+        const dayName = (DAY_NAMES_FULL && DAY_NAMES_FULL[day]) || `Dia ${day}`;
+
+        html += `
+          <div class="print-day">
+            <div class="day-header">
+              <h2>${dayName.toUpperCase().replace('-FEIRA', '')} - ${format(dayDate, 'dd/MM/yyyy', { locale: ptBR })}</h2>
+            </div>
+            <div class="day-content">
+        `;
+
+        categories?.forEach(category => {
+          const categoryItems = Array.isArray(dayItems[category.id]) ? dayItems[category.id] : [];
+
+          const filteredItems = customerId === 'all'
+            ? categoryItems
+            : categoryItems.filter(item =>
+                !item.locations ||
+                item.locations.length === 0 ||
+                item.locations.includes(customerId)
+              );
+
+          html += `
+            <div class="category-section">
+              <h3>${category.name}</h3>
+              <div>
+          `;
+
+          if (filteredItems.length > 0) {
+            filteredItems.forEach(item => {
+              const recipe = recipes?.find(r => r.id === item.recipe_id);
+              if (recipe) {
+                const uncheckedClients = customerId === 'all' ? getUncheckedClients(item, locations, allClientIds) : [];
+                html += `
+                  <div>
+                    <div class="recipe-name">${renderFormattedRecipeName(recipe.name)}</div>
+                    ${uncheckedClients.length > 0 ? `
+                      <div class="unchecked-clients">${uncheckedClients.map(client => client.name).join(', ')}</div>
+                    ` : ''}
+                  </div>
+                `;
+              }
+            });
+          } else {
+            html += '<div>-</div>';
+          }
+
+          html += '</div></div>';
+        });
+
+        html += '</div></div>'; // fecha day-content e print-day
+      });
+
+      html += '</div>'; // fecha print-grid
+      html += '</div>'; // fecha page-chunk
+    });
+
+    return html;
+  }, [getCustomerName, getUncheckedClients, aggregateDayItems]);
+
+  const handlePrintCardapio = useCallback((weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor, visibleDays, availableDays) => {
+    if (!weeklyMenu) return;
+
+    const daysToUse = availableDays || [1, 2, 3, 4, 5];
+    const daysPerPage = visibleDays || daysToUse.length;
+    const colsPerPage = Math.min(daysPerPage, daysToUse.length);
+
+    const printContent = generatePrintableMenu(weeklyMenu, categories, recipes, customers, locations, customerId, currentDate, getCategoryColor, visibleDays, daysToUse);
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -375,7 +278,7 @@ export const usePrintMenu = () => {
         <head>
           <title>Cardápio Semanal</title>
           <style>
-            ${getPrintStyles()}
+            ${getPrintStyles(colsPerPage)}
           </style>
         </head>
         <body>
@@ -383,7 +286,7 @@ export const usePrintMenu = () => {
         </body>
       </html>
     `);
-    
+
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
