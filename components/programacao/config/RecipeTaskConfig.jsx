@@ -499,16 +499,7 @@ const RecipeTaskConfig = ({ recipes = [], activeRecipeIds = new Set(), menuRecip
                 </Button>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-6 px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-200">
-                {Object.values(TASK_TYPES).map(tt => (
-                    <div key={tt.id} className="flex items-center gap-1.5 text-xs">
-                        <div className={`w-3 h-3 rounded-full ${tt.badgeClass.split(' ')[0]}`} />
-                        <span className="font-semibold text-gray-700">{tt.shortLabel}</span>
-                        <span className="text-gray-400">→ {tt.role}</span>
-                    </div>
-                ))}
-            </div>
+
 
             {/* Recipe List */}
             <div className="space-y-2">
