@@ -17,7 +17,8 @@ export default function WeeklyMenuGrid({
   getCategoryColor,
   customers,
   locations,
-  getAllClientIds
+  getAllClientIds,
+  visibleDays = 7
 }) {
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
   const locationSelection = useLocationSelection(getAllClientIds());
@@ -49,27 +50,25 @@ export default function WeeklyMenuGrid({
     });
   };
 
-  // Determinar número de colunas do grid
-  const getGridCols = () => {
-    const numDays = availableDays.length;
-    if (numDays <= 3) return 'repeat(3, 1fr)';
-    if (numDays === 4) return 'repeat(4, 1fr)';
-    if (numDays === 5) return 'repeat(5, 1fr)';
-    if (numDays === 6) return 'repeat(6, 1fr)';
-    return 'repeat(7, 1fr)';
+  // Determinar número de colunas do grid baseado em visibleDays
+  const getGridCols = (numDays) => {
+    return `repeat(${numDays}, 1fr)`;
   };
+
+  // Limitar dias visíveis
+  const daysToShow = availableDays.slice(0, visibleDays);
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: getGridCols(),
+      gridTemplateColumns: getGridCols(daysToShow.length),
       gap: '12px',
       minHeight: 'auto',
       padding: '0',
       width: '100%',
       overflow: 'visible'
     }}>
-      {availableDays.map(day => {
+      {daysToShow.map(day => {
         // Agregar dados de TODOS os grupos (mealTypes) para este dia
         // Estrutura: menu_data[mealType][dayIndex][categoryId] = [items]
         let dayItems = {};

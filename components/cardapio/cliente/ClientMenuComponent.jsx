@@ -23,6 +23,7 @@ export default function ClientMenuComponent() {
 
   // Estados
   const [selectedCustomer, setSelectedCustomer] = useState({ id: "all", name: "Todos os Clientes" });
+  const [visibleDays, setVisibleDays] = useState(7);
 
   // Hooks
   const {
@@ -59,15 +60,30 @@ export default function ClientMenuComponent() {
 
   // Funções utilitárias
   const getActiveCategories = useMemo(() => {
+    console.log('🔍 [ClientMenu DEBUG] ===== getActiveCategories =====');
+    console.log('🔍 [ClientMenu DEBUG] menuConfig:', menuConfig ? 'presente' : 'null');
+    console.log('🔍 [ClientMenu DEBUG] categories count:', categories?.length);
+    console.log('🔍 [ClientMenu DEBUG] weeklyMenu:', weeklyMenu ? 'presente' : 'null');
+    console.log('🔍 [ClientMenu DEBUG] weeklyMenu.menu_data:', weeklyMenu?.menu_data ? JSON.stringify(Object.keys(weeklyMenu.menu_data)) : 'null');
+    console.log('🔍 [ClientMenu DEBUG] weeklyMenu.menu_data FULL:', weeklyMenu?.menu_data ? JSON.stringify(weeklyMenu.menu_data).substring(0, 500) : 'null');
+    console.log('🔍 [ClientMenu DEBUG] category_groups:', menuConfig?.category_groups ? JSON.stringify(menuConfig.category_groups) : 'null');
+
     // Se temos category_groups configurados, usar os itens dos grupos (nível 2)
-    // Isso garante que mostramos as mesmas categorias do painel de Produção Semanal
     if (menuConfig?.category_groups && menuConfig.category_groups.length > 0) {
       const allGroupItems = menuConfig.category_groups.flatMap(g => g.items || []);
       const uniqueItemIds = [...new Set(allGroupItems)];
+      console.log('🔍 [ClientMenu DEBUG] allGroupItems IDs:', uniqueItemIds);
+
       let cats = uniqueItemIds
-        .map(id => categories.find(c => c.id === id))
+        .map(id => {
+          const found = categories.find(c => c.id === id);
+          console.log(`🔍 [ClientMenu DEBUG] Buscando cat ID "${id}": ${found ? found.name : 'NÃO ENCONTRADO'}`);
+          return found;
+        })
         .filter(Boolean)
         .filter(cat => menuConfig.active_categories?.[cat.id] !== false);
+
+      console.log('🔍 [ClientMenu DEBUG] cats final:', cats.map(c => c.name));
 
       if (selectedCustomer && selectedCustomer.id !== 'all') {
         cats = applyClientConfig(cats, selectedCustomer.id);
@@ -77,6 +93,7 @@ export default function ClientMenuComponent() {
 
     // Fallback para comportamento legado (categorias nível 1)
     let activeCategories = menuHelpers.getActiveCategories(categories, menuConfig);
+    console.log('🔍 [ClientMenu DEBUG] FALLBACK activeCategories:', activeCategories?.map(c => c.name));
 
     if (selectedCustomer && selectedCustomer.id !== 'all') {
       activeCategories = applyClientConfig(activeCategories, selectedCustomer.id);
@@ -197,6 +214,24 @@ export default function ClientMenuComponent() {
                 </div>
               </div>
 
+              {/* Botões de modo de exibição */}
+              <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">Exibir:</span>
+                {[2, 3, 5, 7].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setVisibleDays(n)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      visibleDays === n
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {n} dias
+                  </button>
+                ))}
+              </div>
+
               {/* Grid do cardápio */}
               <div className="p-4">
                 <WeeklyMenuGrid
@@ -210,6 +245,7 @@ export default function ClientMenuComponent() {
                   customers={customers}
                   locations={locations}
                   getAllClientIds={getAllClientIds}
+                  visibleDays={visibleDays}
                 />
               </div>
             </div>
