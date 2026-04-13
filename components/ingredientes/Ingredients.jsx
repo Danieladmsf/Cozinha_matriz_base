@@ -94,21 +94,11 @@ export default function Ingredients() {
     });
   };
 
-  // Função para atualizar ingrediente (para o IngredientsTable)
-  const updateIngredient = async (ingredientData) => {
-    try {
-      await onPriceSave(ingredientData);
-      toast({
-        title: "Sucesso",
-        description: "Ingrediente atualizado com sucesso!",
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao atualizar ingrediente.",
-      });
-    }
+  // Função para atualizar state após edição via IngredientsTable/PriceUpdateModal
+  const updateIngredient = (ingredientId, updatedData) => {
+    // O PriceUpdateModal já realizou o salvamento no banco e exibiu os toasts adequados.
+    // Basta recarregar a lista para garantir os dados.
+    loadIngredients();
   };
 
   const [activeTab, setActiveTab] = useState("ingredients");
