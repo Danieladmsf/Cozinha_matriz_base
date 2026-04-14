@@ -56,109 +56,62 @@ export default function Nutrition() {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const router = useRouter();
   
-  // Novo estado para navegação por semana
-  const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Função para navegação entre períodos
-  const handleNavigation = (direction) => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-      return newDate;
-    });
-  };
-
-  // Função para obter categorias únicas de todos os alimentos
-  const getDynamicCategories = (foodsData) => {
-    // Extrair categorias únicas dos alimentos
-    const uniqueCategories = new Map();
-    
-    foodsData.forEach(food => {
-      if (food.category_name) {
-        // Se ainda não temos esta categoria, adicionar
-        if (!uniqueCategories.has(food.category_name.toLowerCase())) {
-          uniqueCategories.set(food.category_name.toLowerCase(), {
-            category: food.category_name,
-            count: 1,
-            id: food.category_id || `dynamic-${food.category_name.toLowerCase().replace(/\s+/g, '-')}`
-          });
-        } else {
-          // Incrementar contador
-          const category = uniqueCategories.get(food.category_name.toLowerCase());
-          category.count++;
-        }
-      }
-    });
-    
-    // Converter para array e ordenar por nome
-    return Array.from(uniqueCategories.values())
-      .sort((a, b) => a.category.localeCompare(b.category));
-  };
-
-  // Modificar fetchData para usar categorias dinâmicas
+  // Função para carregar dados do Firebase
   const fetchData = async () => {
     try {
       setLoading(true);
       
-      // Testar acesso às coleções separadamente para diagnóstico
-      const foodsData = await NutritionFood.list();
+      // Carregar alimentos e categorias em paralelo
+      const [foodsData, storedCategories] = await Promise.all([
+        NutritionFood.list(),
+        NutritionCategory.list()
+      ]);
       
-      const storedCategories = await NutritionCategory.list();
-      
-      // Obter categorias dinâmicas a partir dos alimentos
-      const dynamicCategories = getDynamicCategories(foodsData);
-      
-      // Mapear categorias por nome
-      const categoryMap = new Map();
-      storedCategories.forEach(cat => {
-        if (cat.category) {
-          categoryMap.set(cat.category.toLowerCase(), cat);
+      // Mapear categorias para garantir que tenham contagem
+      const categoryCounts = new Map();
+      foodsData.forEach(food => {
+        if (food.category_name) {
+          const name = food.category_name.toLowerCase();
+          categoryCounts.set(name, (categoryCounts.get(name) || 0) + 1);
         }
       });
+
+      // Se não houver categorias no banco, podemos usar as dinâmicas
+      let finalCategories = [];
+      if (storedCategories && storedCategories.length > 0) {
+        finalCategories = storedCategories.map(cat => ({
+          ...cat,
+          count: categoryCounts.get(cat.category?.toLowerCase()) || 0
+        }));
+      } else {
+        // Fallback para dinâmico se o banco estiver vazio (não deve acontecer após o script)
+        const uniqueNames = [...new Set(foodsData.map(f => f.category_name))].filter(Boolean);
+        finalCategories = uniqueNames.map(name => ({
+          id: name.toLowerCase().replace(/[^\w]/g, '_'),
+          category: name,
+          count: categoryCounts.get(name.toLowerCase()) || 0
+        }));
+      }
+
+      // Ordenar categorias por nome
+      finalCategories.sort((a, b) => a.category.localeCompare(b.category));
       
-      // Complementar categorias dinâmicas com IDs das categorias cadastradas
-      const enhancedCategories = dynamicCategories.map(dynCat => {
-        // Verificar se dynCat.category existe antes de chamar toLowerCase()
-        if (!dynCat.category) {
-          return {
-            ...dynCat,
-            category: 'Sem Categoria',
-            id: dynCat.id
-          };
-        }
-        
-        const storedCat = categoryMap.get(dynCat.category.toLowerCase());
-        return {
-          ...dynCat,
-          id: storedCat?.id || dynCat.id || `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          // Usar categoria cadastrada se houver, senão usar a do alimento
-          category: storedCat?.category || dynCat.category
-        };
-      });
-      
-      // Garantir que todos os alimentos tenham IDs válidos
+      // Garantir IDs únicos para alimentos
       const validatedFoods = foodsData.map((food, index) => ({
         ...food,
-        id: food.id || `food-${index}-${Date.now()}`
+        id: food.id || `taco_${food.taco_id || index}`
       }));
 
-      setCategories(enhancedCategories);
+      setCategories(finalCategories);
       setFoods(validatedFoods);
       
-      
     } catch (error) {
-      // Verificar se é erro de autenticação
-      if (error.code === 'permission-denied' || error.message?.includes('permission-denied')) {
-      }
-      
-      // Verificar se é erro de rede
-      if (error.code === 'unavailable' || error.message?.includes('unavailable')) {
-      }
-      
+      console.error("Erro ao carregar dados de nutrição:", error);
     } finally {
       setLoading(false);
     }
@@ -368,38 +321,12 @@ export default function Nutrition() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Navegação semelhante ao cardápio */}
-              <div className="flex items-center bg-white border rounded-md">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleNavigation('prev')}
-                  className="h-9 w-9"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                
-                <DateSelector 
-                  currentDate={currentDate} 
-                  onDateChange={setCurrentDate} 
-                />
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => handleNavigation('next')}
-                  className="h-9 w-9"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-            
               <Button 
                 variant="outline"
                 onClick={() => router.push('/nutritionimport')}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                Importar TACO
+                Importador
               </Button>
 
               <Button onClick={() => router.push('/nutritionfoodeditor')}>
@@ -412,7 +339,13 @@ export default function Nutrition() {
 
         {/* Tabs de Nutrientes */}
         <div className="p-8 flex-1 overflow-hidden">
-          <Tabs defaultValue="macro" className="h-full">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-gray-500 font-medium">Carregando dados nutricionais...</p>
+            </div>
+          ) : (
+            <Tabs defaultValue="macro" className="h-full">
             <TabsList className="bg-white rounded-lg border p-1 mb-6">
               <TabsTrigger value="macro">Macronutrientes</TabsTrigger>
               <TabsTrigger value="minerais">Minerais</TabsTrigger>
@@ -706,42 +639,10 @@ export default function Nutrition() {
               </TabsContent>
             </div>
           </Tabs>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// Componente para seleção de data semelhante ao do cardápio
-const DateSelector = ({ currentDate, onDateChange }) => (
-  <Popover>
-    <PopoverTrigger asChild>
-      <Button
-        variant={"outline"}
-        className={cn(
-          "w-[180px] justify-start text-left font-normal",
-          !currentDate && "text-muted-foreground"
-        )}
-      >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {currentDate ? (
-          format(currentDate, "MMMM yyyy", { locale: ptBR })
-        ) : (
-          <span>Selecione mês/ano</span>
-        )}
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent className="w-auto p-0" align="center">
-      <Calendar
-        mode="month"
-        defaultMonth={currentDate}
-        selected={currentDate}
-        onSelect={onDateChange}
-        disabled={(date) =>
-          date > new Date() || date < new Date("2023-01-01")
-        }
-        initialFocus
-      />
-    </PopoverContent>
-  </Popover>
-);
