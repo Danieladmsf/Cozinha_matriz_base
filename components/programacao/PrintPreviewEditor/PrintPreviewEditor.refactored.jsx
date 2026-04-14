@@ -801,13 +801,27 @@ export default function PrintPreviewEditor({
         Object.entries(consolidatedItems).forEach(([subcategoryName, items]) => {
           if (!items || items.length === 0) return;
 
+          // Merge global notes
+          const itemsWithNotes = items.map(item => {
+            const globalNote = typeof data.getGlobalNote === 'function' ? data.getGlobalNote(item.recipe_id, item.recipe_name) : null;
+            let finalNotes = item.notes ? item.notes.trim() : '';
+            if (globalNote && globalNote.trim()) {
+              if (finalNotes && !finalNotes.includes(globalNote.trim())) {
+                finalNotes = `${finalNotes} | ${globalNote.trim()}`;
+              } else if (!finalNotes) {
+                finalNotes = globalNote.trim();
+              }
+            }
+            return { ...item, notes: finalNotes };
+          });
+
           // Resolver categoria nível 1 via categoryMap (usando chave normalizada)
           const normalizedKey = subcategoryName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
           const parentCat = categoryMap?.[normalizedKey];
           const l1Name = parentCat?.name || 'Outros';
 
           if (!groupedByL1[l1Name]) groupedByL1[l1Name] = {};
-          groupedByL1[l1Name][subcategoryName] = items;
+          groupedByL1[l1Name][subcategoryName] = itemsWithNotes;
         });
 
         // Criar 1 bloco por categoria nível 1 (contendo todas as subcategorias)

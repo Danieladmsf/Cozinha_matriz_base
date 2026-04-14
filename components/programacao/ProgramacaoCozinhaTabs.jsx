@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import '../cardapio/consolidacao/print-styles.css';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,7 @@ const ConsolidacaoContent = ({
   weekDays,
   selectedDay,
   formatQuantityDisplay,
+  getGlobalNote,
 }) => (
   <>
     {loading.orders ? (
@@ -145,16 +146,35 @@ const ConsolidacaoContent = ({
                                 key={`${item.unique_id || item.recipe_id}_${index}`}
                                 className="flex items-start gap-3 print:gap-6 text-sm print:text-lg"
                               >
+                                <div style={{ display: 'none' }} id={`debug-item-${index}`} data-recipe-id={item.recipe_id} data-recipe-name={item.recipe_name} data-notes={item.notes} />
                                 <span className="font-semibold text-blue-700 min-w-[50px] print:min-w-[80px] text-sm">
                                   {formatQuantityDisplay(item)}
                                 </span>
                                 <span className="text-gray-800 flex-1">
                                   {item.recipe_name}
-                                  {item.notes && item.notes.trim() && (
-                                    <span className="text-gray-600 italic">
-                                      {' '}({item.notes.trim()})
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    // Localizar possível observação global do cardápio para esta receita e dia
+                                    let globalNote = null;
+                                    if (typeof getGlobalNote === 'function') {
+                                      globalNote = getGlobalNote(item.recipe_id, item.recipe_name);
+                                    }
+                                    
+                                    const hasOrderNotes = item.notes && item.notes.trim();
+                                    const hasGlobalNotes = globalNote && globalNote.trim();
+
+                                    if (!hasOrderNotes && !hasGlobalNotes) return null;
+                                    
+                                    return (
+                                      <span className="text-gray-600 italic">
+                                        {' '}
+                                        (
+                                        {[hasOrderNotes ? item.notes.trim() : null, hasGlobalNotes ? globalNote.trim() : null]
+                                          .filter(Boolean)
+                                          .join(' | ')}
+                                        )
+                                      </span>
+                                    );
+                                  })()}
                                 </span>
                               </div>
                             ))}
@@ -189,7 +209,8 @@ const ProgramacaoCozinhaTabs = () => {
     customers,
     recipes,
     orders,
-    navigateWeek
+    navigateWeek,
+    menuNotes
   } = useProgramacaoRealtimeData();
 
   // URL params para persistir estado do editor
@@ -414,6 +435,18 @@ const ProgramacaoCozinhaTabs = () => {
 
   // Hook de consolidação (deve vir depois de filteredOrders)
   const { ordersByCustomer, consolidateCustomerItems } = useOrderConsolidation(filteredOrders, recipes);
+
+  // Obtém a nota global do cardápio para o dia atual e a receita dada
+  const getGlobalNote = useCallback((recipeId, recipeName) => {
+    if (!menuNotes) return null;
+    const note = menuNotes.find(
+      n => n.day_of_week == selectedDay && (
+        n.recipe_id === recipeId || 
+        (n.recipe_name && recipeName && n.recipe_name.trim().toLowerCase() === recipeName.trim().toLowerCase())
+      )
+    );
+    return note ? note.content : null;
+  }, [menuNotes, selectedDay]);
 
   // Lógica segura de formatação (Arquitetura Nativa / Quilo e Unidade)
   const formatQuantityDisplay = (item) => {
@@ -714,15 +747,25 @@ const ProgramacaoCozinhaTabs = () => {
             <div class="category-block" style="margin-bottom: ${spacing * 2}px;">
               <h2 class="category-name" style="font-size: ${h2Size}px; margin-bottom: ${spacing}px;">${categoryName}</h2>
               <div class="items-list" style="margin-left: ${baseFontSize}px;">
-                ${items.map((item) => `
+                ${items.map((item) => {
+                  let globalNote = null;
+                  if (typeof getGlobalNote === 'function') {
+                    globalNote = getGlobalNote(item.recipe_id);
+                  }
+                  const hasOrderNotes = item.notes && item.notes.trim();
+                  const hasGlobalNotes = globalNote && globalNote.trim();
+                  const noteContent = [hasOrderNotes ? item.notes.trim() : null, hasGlobalNotes ? globalNote.trim() : null].filter(Boolean).join(' | ');
+
+                  return `
                   <div class="item-row" style="margin-bottom: ${spacing}px; gap: ${spacing}px;">
                     <span class="item-quantity" style="font-size: ${qtySize}px;">${formatQuantityDisplay(item)}</span>
                     <span class="item-name" style="font-size: ${nameSize}px;">
                       ${item.recipe_name}
-                      ${item.notes && item.notes.trim() ? `<span class="notes" style="font-style: italic; color: #6b7280;"> (${item.notes.trim()})</span>` : ''}
+                      ${noteContent ? `<span class="notes" style="font-style: italic; color: #6b7280;"> (${noteContent})</span>` : ''}
                     </span>
                   </div>
-                `).join('')}
+                `;
+                }).join('')}
               </div>
             </div>
           `).join('')}
@@ -751,9 +794,17 @@ const ProgramacaoCozinhaTabs = () => {
                 <h2 style="font-size: ${h2Size}px; margin-bottom: ${baseFontSize * 0.5}px;">${index + 1}. ${nomeReceita.toUpperCase()}</h2>
                 <div class="clients-list" style="padding-left: ${baseFontSize}px;">
                   ${Object.entries(clientes).map(([customerName, dataCustomer]) => {
-      const notesText = dataCustomer.items && dataCustomer.items.length > 0 && dataCustomer.items[0].notes
+      const orderNotes = dataCustomer.items && dataCustomer.items.length > 0 && dataCustomer.items[0].notes
         ? dataCustomer.items[0].notes.trim()
         : '';
+        
+      let globalNote = '';
+      if (typeof getGlobalNote === 'function' && dataCustomer.items && dataCustomer.items.length > 0) {
+        globalNote = getGlobalNote(dataCustomer.items[0].recipe_id) || '';
+      }
+      
+      const notesText = [orderNotes, globalNote].filter(Boolean).join(' | ');
+
       return `
                     <div class="client-line" style="margin-bottom: ${baseFontSize * 0.4}px; gap: ${baseFontSize * 0.3}px;">
                       <span style="font-size: ${textSize}px;">${customerName.toUpperCase()}</span>
@@ -1457,7 +1508,9 @@ const ProgramacaoCozinhaTabs = () => {
           consolidateCustomerItems,
           recipes,
           categoryMap,
-          originalOrders: filteredOrders
+          originalOrders: filteredOrders,
+          menuNotes,
+          getGlobalNote
         }}
         weekDays={weekDays}
         selectedDay={selectedDay}
@@ -1632,6 +1685,7 @@ const ProgramacaoCozinhaTabs = () => {
                         weekDays={weekDays}
                         selectedDay={selectedDay}
                         formatQuantityDisplay={formatQuantityDisplay}
+                        getGlobalNote={getGlobalNote}
                       />
                     )}
                   </TabsContent>

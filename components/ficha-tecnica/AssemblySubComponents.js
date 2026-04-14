@@ -138,12 +138,13 @@ const AssemblySubComponents = ({
   // Calculate proportional costs and percentages for each component
 
   const componentsWithCalculations = subComponents.map((sc, index) => {
-    const componentWeightNumeric = parseNumericValue(sc.assembly_weight_kg) || 0;
-    const percentage = totalAssemblyWeight > 0 ? (componentWeightNumeric / totalAssemblyWeight) * 100 : 0;
+    const sourcePrep = preparationsData.find(p => p.id === sc.source_id);
+    const isPackaging = sourcePrep?.processes?.includes('packaging') || sc.isPackaging === true;
+
+    const componentWeightNumeric = isPackaging ? 0 : (parseNumericValue(sc.assembly_weight_kg) || 0);
+    const percentage = isPackaging ? 0 : (totalAssemblyWeight > 0 ? (componentWeightNumeric / totalAssemblyWeight) * 100 : 0);
 
     let proportionalCost = 0;
-
-    const sourcePrep = preparationsData.find(p => p.id === sc.source_id);
 
     if (sourcePrep) {
       // Recalcula as métricas da preparação dinamicamente para obter os valores mais recentes
@@ -151,8 +152,12 @@ const AssemblySubComponents = ({
       let sourceYieldWeight = sourceMetrics.totalYieldWeight;
       let sourceTotalCost = sourceMetrics.totalCost;
 
+      if (isPackaging) {
+        // Embalagem: custo total direto (não proporcional por peso)
+        proportionalCost = sourceTotalCost;
+      }
       // PATCH: Se o custo da preparação for zero, verifique se é um ingrediente simples.
-      if (sourceTotalCost === 0 && sourcePrep.ingredients?.length === 1 && (!sourcePrep.sub_components || sourcePrep.sub_components.length === 0)) {
+      else if (sourceTotalCost === 0 && sourcePrep.ingredients?.length === 1 && (!sourcePrep.sub_components || sourcePrep.sub_components.length === 0)) {
         const singleIngredient = sourcePrep.ingredients[0];
         const unitPrice = RecipeCalculator.getUnitPrice(singleIngredient);
 
@@ -188,6 +193,7 @@ const AssemblySubComponents = ({
       percentage,
       proportionalCost,
       componentWeightNumeric,
+      isPackaging,
       displayName: sourcePrep ? sourcePrep.title : sc.name
     };
   });
@@ -233,22 +239,49 @@ const AssemblySubComponents = ({
                   </td>
 
                   <td className="px-3 py-2 text-center">
-                    <Input
-                      type="text"
-                      value={sc.assembly_weight_kg || ''}
-                      onChange={(e) => handleWeightChange(sc.id, e.target.value)}
-                      onBlur={() => handleInputBlur(sc)}
-                      className="w-20 h-7 text-center text-xs border-gray-300 mx-auto transition-colors focus:border-indigo-500"
-                      placeholder="0,000"
-                    />
-                    {sc.origin_id && (
-                      <div className="text-[10px] text-gray-400 mt-0.5">Matriz</div>
-                    )}
+                    {(() => {
+                      if (sc.isPackaging) {
+                        const sourcePkgPrep = preparationsData.find(p => p.id === sc.source_id);
+                        const pkgItemCount = sourcePkgPrep?.ingredients?.length || 0;
+                        if (pkgItemCount <= 1) {
+                          return (
+                            <Input
+                              type="text"
+                              value="1"
+                              readOnly
+                              className="w-20 h-7 text-center text-xs bg-gray-50 cursor-not-allowed border-gray-200 mx-auto"
+                            />
+                          );
+                        }
+                        return <span className="text-xs text-amber-600 font-medium italic">Kit Embalagem</span>;
+                      }
+                      
+                      return (
+                        <div className="flex flex-col items-center">
+                          <Input
+                            type="text"
+                            value={sc.assembly_weight_kg || ''}
+                            onChange={(e) => handleWeightChange(sc.id, e.target.value)}
+                            onBlur={() => handleInputBlur(sc)}
+                            className="w-20 h-7 text-center text-xs border-gray-300 transition-colors focus:border-indigo-500"
+                            placeholder="0,000"
+                          />
+                          {sc.origin_id && (
+                            <div className="text-[10px] text-gray-400 mt-0.5">Matriz</div>
+                          )}
+                          {(parseNumericValue(prep?.assembly_config?.units_quantity) || 1) > 1 && (
+                            <div className="text-[9px] text-blue-500 font-medium mt-0.5 leading-tight" title="Peso Unitário">
+                              Unit: {((parseNumericValue(sc.assembly_weight_kg) || 0) / (parseNumericValue(prep?.assembly_config?.units_quantity) || 1)).toFixed(3).replace('.',',')} kg
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   <td className="px-3 py-2 text-center">
                     <span className="font-semibold text-indigo-600">
-                      {(sc.isPackaging || (preparationsData.find(p => p.id === sc.source_id)?.processes?.includes('packaging')))
+                      {sc.isPackaging
                         ? '-'
                         : `${sc.percentage.toFixed(1).replace('.', ',')}%`
                       }

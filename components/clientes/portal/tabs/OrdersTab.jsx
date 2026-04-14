@@ -250,7 +250,27 @@ const OrdersTab = ({
                                 {item.tech_sheet_units_quantity > 0 && item.tech_sheet_unit_weight > 0 && (() => {
                                   const unitTypeLower = item.unit_type ? item.unit_type.toLowerCase() : '';
                                   const isPorcao = unitTypeLower === 'porção';
-                                  const isKg = unitTypeLower === 'kg' || unitTypeLower === 'quilo';
+
+                                  // NOVA LÓGICA: Ler DIRETAMENTE a configuração da Ficha Técnica
+                                  // Como o produto importado (VR) pode estar como "unidade", precisamos
+                                  // verificar se a Ficha Técnica foi configurada com Rendimento em "Quilo".
+                                  let isRecipeConfigKg = false;
+                                  if (item.recipe && item.recipe.preparations && item.recipe.preparations.length > 0) {
+                                      const prepList = item.recipe.preparations;
+                                      let targetPrep = prepList.find(p => p.title === '2º Etapa: Porcionamento' || (p.processes && p.processes.includes('portioning')));
+                                      if (!targetPrep) {
+                                          targetPrep = prepList[prepList.length - 1];
+                                      }
+                                      
+                                      if (targetPrep && targetPrep.assembly_config && targetPrep.assembly_config.unit_type) {
+                                         const assemblyType = targetPrep.assembly_config.unit_type.toLowerCase();
+                                         if (assemblyType === 'kg' || assemblyType === 'quilo') {
+                                             isRecipeConfigKg = true;
+                                         }
+                                      }
+                                  }
+
+                                  const isKg = isRecipeConfigKg || unitTypeLower === 'kg' || unitTypeLower === 'quilo';
                                   
                                   const totalRecipeWeight = (item.tech_sheet_units_quantity || 0) * (item.tech_sheet_unit_weight || 0);
 

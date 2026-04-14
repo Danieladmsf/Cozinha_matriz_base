@@ -183,7 +183,8 @@ export const useOrderConsolidation = (orders, recipes, excludeCategories = []) =
             category: recipe?.category || item.category || 'Outros',
             unit_type: correctUnitType,
             quantity: parseQuantity(item.quantity), // CORRIGIDO: Normalizar quantidade
-            recipe_name: recipe?.name || item.recipe_name // Garantir nome da receita
+            recipe_name: recipe?.name || item.recipe_name, // Garantir nome da receita
+            recipe_id: recipe?.id || item.recipe_id // CORRIGIDO: Sincronizar com ID da Ficha Técnica
           };
         });
 
@@ -267,6 +268,7 @@ export const useOrderConsolidation = (orders, recipes, excludeCategories = []) =
               total_price: validateAmount(item.total_price),
               unit_type: correctUnitType, // Usar unidade sincronizada
               recipe_name: recipe?.name || item.recipe_name, // Garantir nome da receita
+              recipe_id: recipe?.id || item.recipe_id, // CORRIGIDO: Sincronizar com ID da Ficha Técnica
               unique_id: key // Usar recipe_id como unique_id consolidado
             };
 

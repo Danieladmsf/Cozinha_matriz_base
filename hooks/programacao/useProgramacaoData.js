@@ -16,9 +16,10 @@ export const useProgramacaoData = () => {
   // Hook centralizado para dias disponíveis
   const availableDays = useAvailableDays();
 
-  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 0 }), [currentDate]);
+  const dbWeekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekNumber = useMemo(() => getWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
-  const year = useMemo(() => getYear(currentDate), [currentDate]);
+  const year = useMemo(() => dbWeekStart.getFullYear(), [dbWeekStart]);
+  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 0 }), [currentDate]);
 
   const weekDays = useMemo(() => {
     return availableDays.map((dayIndex) => {

@@ -41,7 +41,8 @@ const IngredientTable = ({
       <div className="space-y-4">
 
 
-        {/* CONFIGURAÇÃO DE RENDIMENTO DA MONTAGEM */}
+        {/* CONFIGURAÇÃO DE RENDIMENTO DA MONTAGEM - Somente para Montagem, NÃO para Porcionamento */}
+        {isAssemblyOnly && (
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div>
             <Label className="text-sm font-medium text-gray-700">Rendimento da Etapa</Label>
@@ -157,8 +158,8 @@ const IngredientTable = ({
             />
             <span className="text-sm font-medium text-gray-600 whitespace-nowrap">
               {prep.assembly_config?.unit_type === 'kg'
-                ? `kg por ${isAssemblyOnly ? 'Montagem' : 'Porção'}`
-                : `unidades por ${isAssemblyOnly ? 'Montagem' : 'Porção'}`}
+                ? 'kg por Montagem'
+                : 'unidades por Montagem'}
             </span>
           </div>
 
@@ -204,6 +205,36 @@ const IngredientTable = ({
             </select>
           </div>
         </div>
+        )}
+
+        {/* Porcionamento: Apenas o seletor de tipo (kg/un) sem input de quantidade */}
+        {isPortioningOnly && (
+          <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Configuração do Porcionamento</Label>
+              <p className="text-xs text-gray-500">
+                Defina o tipo de finalização desta porção (peso em kg ou unidades individuais).
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium text-gray-700">Tipo:</Label>
+              <select
+                className="h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={prep.assembly_config?.unit_type || 'un'}
+                onChange={(e) => {
+                  const newConfig = {
+                    ...(prep.assembly_config || {}),
+                    unit_type: e.target.value
+                  };
+                  onUpdatePreparation(prepIndex, 'assembly_config', newConfig);
+                }}
+              >
+                <option value="un">Unidade</option>
+                <option value="kg">Quilo</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* 2. Tabela de Componentes com Configuração no Rodapé */}
         <AssemblySubComponents

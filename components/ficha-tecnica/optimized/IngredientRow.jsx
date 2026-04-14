@@ -111,14 +111,10 @@ const IngredientRow = ({
       let finalWeight = 0;
 
       // Determinar peso inicial - pegar o primeiro campo preenchido na ordem dos processos
-      if (hasProcess('defrosting')) {
+      if (hasProcess('defrosting') && parseNumericValue(ingredient.weight_frozen) > 0) {
         initialWeight = parseNumericValue(ingredient.weight_frozen);
-      } else if (hasProcess('cleaning')) {
-        // Se tem limpeza, tentar weight_raw, senão pegar o próximo disponível
+      } else if ((hasProcess('cleaning') || hasProcess('defrosting')) && parseNumericValue(ingredient.weight_raw) > 0) {
         initialWeight = parseNumericValue(ingredient.weight_raw);
-        if (initialWeight === 0 && hasProcess('cooking')) {
-          initialWeight = parseNumericValue(ingredient.weight_pre_cooking);
-        }
       } else if (hasProcess('cooking')) {
         // Se só tem cocção, usar weight_pre_cooking ou weight_raw
         initialWeight = parseNumericValue(ingredient.weight_pre_cooking) ||
@@ -128,16 +124,16 @@ const IngredientRow = ({
       }
 
       // Determinar peso final - SEMPRE o último processo da cadeia
-      if (hasProcess('portioning')) {
+      if (hasProcess('portioning') && parseNumericValue(ingredient.weight_portioned) > 0) {
         finalWeight = parseNumericValue(ingredient.weight_portioned);
       } else if (hasProcess('packaging')) {
         // Para embalagem, o peso final é igual ao inicial (perda zero)
         finalWeight = parseNumericValue(ingredient.weight_raw) || parseNumericValue(ingredient.quantity);
-      } else if (hasProcess('cooking')) {
+      } else if (hasProcess('cooking') && parseNumericValue(ingredient.weight_cooked) > 0) {
         finalWeight = parseNumericValue(ingredient.weight_cooked);
-      } else if (hasProcess('cleaning')) {
+      } else if (hasProcess('cleaning') && parseNumericValue(ingredient.weight_clean) > 0) {
         finalWeight = parseNumericValue(ingredient.weight_clean);
-      } else if (hasProcess('defrosting')) {
+      } else if (hasProcess('defrosting') && parseNumericValue(ingredient.weight_thawed) > 0) {
         finalWeight = parseNumericValue(ingredient.weight_thawed);
       }
 
@@ -149,7 +145,7 @@ const IngredientRow = ({
     const defrostingLoss = calculateLoss(ingredient.weight_frozen, ingredient.weight_thawed);
 
     let cleaningInitialWeight = 0;
-    if (hasProcess('defrosting')) {
+    if (hasProcess('defrosting') && parseNumericValue(ingredient.weight_thawed) > 0) {
       cleaningInitialWeight = parseNumericValue(ingredient.weight_thawed);
     } else {
       cleaningInitialWeight = parseNumericValue(ingredient.weight_raw);
@@ -231,6 +227,10 @@ const IngredientRow = ({
       <TableCell className="text-center px-4 py-2">
         {(() => {
           const brutPrice = parseNumericValue(ingredient.current_price);
+          if (hasProcess('packaging')) {
+            // Para embalagem: custo = preço unitário (cada item é 1 unidade)
+            return formatCurrency(brutPrice);
+          }
           const yieldPercent = calculatedValues.yieldPercentage;
           const liquidPrice = yieldPercent > 0 ? brutPrice / (yieldPercent / 100) : brutPrice;
           return formatCurrency(liquidPrice);
@@ -293,14 +293,28 @@ const IngredientRow = ({
           )}
           {hasProcess('defrosting') && (
             <TableCell className="px-4 py-2">
-              <Input
-                type="text"
-                value={formatDisplayValue(ingredient.weight_thawed)}
-                readOnly
-                className="w-24 h-8 text-center text-xs bg-gray-50 cursor-not-allowed"
-                placeholder="0,000"
-                title="Valor vem do processo de descongelamento"
-              />
+              {parseNumericValue(ingredient.weight_frozen) > 0 || parseNumericValue(ingredient.weight_thawed) > 0 ? (
+                <Input
+                  type="text"
+                  value={formatDisplayValue(ingredient.weight_thawed)}
+                  readOnly
+                  className="w-24 h-8 text-center text-xs bg-gray-50 cursor-not-allowed"
+                  placeholder="0,000"
+                  title="Valor vem do processo de descongelamento"
+                />
+              ) : (
+                <Input
+                  type="text"
+                  value={formatDisplayValue(ingredient.weight_raw)}
+                  onChange={(e) => updateIngredientField('weight_raw', e.target.value)}
+                  onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  disabled={readOnly || ingredient.locked}
+                  className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  placeholder="0,000"
+                  title="Peso de entrada limpo (Fresco)"
+                />
+              )}
             </TableCell>
           )}
           <TableCell className="px-4 py-2">
