@@ -647,9 +647,20 @@ export default function Recipes() {
     const data = fullCategoryTree.filter(c => c.active !== false);
     const roots = data.filter(c => c.level === 1).sort((a, b) => (a.order || 0) - (b.order || 0));
 
+    // Normalização canônica para unificar tipos em inglês/português
+    const normalizeType = (t) => {
+      const raw = (t || '').toLowerCase().trim();
+      const aliases = {
+        'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+        'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+        'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+      };
+      return aliases[raw] || raw || 'receitas';
+    };
+
     const rootsByType = {};
     roots.forEach(root => {
-      const type = root.type || 'receitas';
+      const type = normalizeType(root.type);
       if (!rootsByType[type]) rootsByType[type] = [];
       rootsByType[type].push(root);
     });
@@ -678,7 +689,7 @@ export default function Recipes() {
       const typeLabel = typeLabels[type] || type.toUpperCase();
       let typeItems = [];
       typeRoots.forEach(root => {
-        const rootLabel = `${typeLabel} | ${root.name}`;
+        const rootLabel = root.name; // removido o prefixo
         typeItems.push({ value: root.id, label: rootLabel, originalName: root.name, id: root.id, isRoot: true });
         typeItems.push(...buildDescendants(data, root.id, rootLabel));
       });

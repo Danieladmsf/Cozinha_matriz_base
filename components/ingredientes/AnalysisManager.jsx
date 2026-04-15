@@ -429,7 +429,10 @@ export default function AnalysisManager() {
     // Determine source ingredients: Comparison (priority) or Filtered
     const isComparisonMode = selectedComparisonIds.length > 0;
     let sourceIngredients = isComparisonMode
-      ? ingredients.filter(i => selectedComparisonIds.includes(i.id))
+      ? ingredients.filter(i => selectedComparisonIds.includes(i.id)).map(ing => {
+          const hist = priceHistory.filter(h => h.ingredient_id === ing.id).sort((a,b) => b.date.localeCompare(a.date));
+          return { ...ing, history: hist };
+        })
       : filteredIngredients;
 
     if (!sourceIngredients || sourceIngredients.length === 0) return [];

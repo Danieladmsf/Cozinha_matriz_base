@@ -37,12 +37,12 @@ export default function Categories() {
   const [categoryTree, setCategoryTree] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isNewTabDialogOpen, setIsNewTabDialogOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState("ingredient");
+  const [selectedType, setSelectedType] = useState("ingredientes");
   const [currentCategory, setCurrentCategory] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [formData, setFormData] = useState({
     name: "",
-    type: "ingredient",
+    type: "ingredientes",
     description: "",
     parent_id: null,
     level: 1,

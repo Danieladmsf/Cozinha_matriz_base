@@ -46,6 +46,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from 'date-fns/locale';
+import AddIndustrialFoodModal from "./AddIndustrialFoodModal";
 
 export default function Nutrition() {
   const [categories, setCategories] = useState([]);
@@ -321,18 +322,7 @@ export default function Nutrition() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button 
-                variant="outline"
-                onClick={() => router.push('/nutritionimport')}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Importador
-              </Button>
-
-              <Button onClick={() => router.push('/nutritionfoodeditor')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Alimento
-              </Button>
+              <AddIndustrialFoodModal onFoodAdded={fetchData} />
             </div>
           </div>
         </div>

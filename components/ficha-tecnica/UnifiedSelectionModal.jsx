@@ -31,7 +31,7 @@ export function UnifiedSelectionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogContent className="sm:max-w-2xl h-[80vh] flex flex-col p-0 gap-0">
+            <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col p-0 gap-0">
                 {/* Cabeçalho Customizado Dinâmico */}
                 <div className="px-6 pt-6 pb-2">
                     <DialogHeader className="mb-4">

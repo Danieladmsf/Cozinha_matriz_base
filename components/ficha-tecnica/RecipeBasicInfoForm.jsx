@@ -44,9 +44,19 @@ export default function RecipeBasicInfoForm() {
   const loadCategories = async () => {
     try {
       const data = await CategoryTree.list();
+      // Normalização canônica para unificar tipos em inglês/português
+      const normalizeType = (t) => {
+        const raw = (t || '').toLowerCase().trim();
+        const aliases = {
+          'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
+          'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
+          'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
+        };
+        return aliases[raw] || raw || 'receitas';
+      };
 
-      // Filtrar apenas categorias de receitas
-      const recipeCats = data.filter(cat => cat.type === "receitas" && cat.active !== false);
+      // Filtrar apenas categorias de receitas (normalizado)
+      const recipeCats = data.filter(cat => normalizeType(cat.type) === "receitas" && cat.active !== false);
 
       const roots = recipeCats
         .filter(c => c.level === 1)

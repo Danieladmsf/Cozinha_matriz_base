@@ -40,6 +40,8 @@ export default function RootLayout({ children }) {
 
   // Verifica se é uma rota do portal do cliente
   const isPortalRoute = pathname.startsWith('/portal');
+  // Verifica se é a landing page raiz
+  const isLandingRoute = pathname === '/';
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -86,8 +88,8 @@ export default function RootLayout({ children }) {
     }
   };
 
-  // Se for rota do portal, renderiza layout limpo
-  if (isPortalRoute) {
+  // Se for rota do portal ou landing, renderiza layout limpo
+  if (isPortalRoute || isLandingRoute) {
     return (
       <html lang="pt-BR">
         <head>

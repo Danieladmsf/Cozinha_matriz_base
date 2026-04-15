@@ -285,6 +285,25 @@ const createEntity = (collectionName) => {
       }
     },
 
+    // Filter by object (convenience wrapper)
+    filter: async (filterObj) => {
+      const filters = Object.entries(filterObj).map(([field, value]) => ({
+        field,
+        operator: '==',
+        value
+      }));
+      try {
+        let q = collection(db, collectionName);
+        const constraints = filters.map(f => where(f.field, f.operator, f.value));
+        q = query(q, ...constraints);
+        
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      } catch (error) {
+        throw new Error(`Failed to filter ${collectionName}: ${error.message}`);
+      }
+    },
+
     // Query with filters
     query: async (filters = [], orderByField = null, limitCount = null) => {
       try {

@@ -106,6 +106,9 @@ import RecipeMenuActions from "./RecipeMenuActions";
 import RecipeGeneralInfo from "./RecipeGeneralInfo";
 import RecipeMetricsDashboard from "./RecipeMetricsDashboard";
 import RecipeBook from "./RecipeBook";
+import RecipeSettingsDialog from "@/components/receitas/RecipeSettingsDialog";
+import RecipeFormModal from "@/components/receitas/RecipeFormModal";
+import NutritionalInfo from "@/components/receitas/NutritionalInfo";
 import RecipeEngine from '@/lib/recipe-engine/RecipeEngine';
 
 export default function RecipeTechnical() {
@@ -959,8 +962,9 @@ export default function RecipeTechnical() {
 
         {/* Sistema de Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="dados-tecnicos">Dados Técnicos</TabsTrigger>
+            <TabsTrigger value="nutricao">Nutrição</TabsTrigger>
             <TabsTrigger value="book">Receituário</TabsTrigger>
           </TabsList>
           <TabsContent value="dados-tecnicos">
@@ -1066,6 +1070,14 @@ export default function RecipeTechnical() {
               removePreparation={removePreparation}
 
               handleSaveRecipe={handleSaveRecipe}
+            />
+          </TabsContent>
+
+          <TabsContent value="nutricao" className="min-h-[600px]">
+            <NutritionalInfo 
+              recipe={{ ...recipeData, preparations: preparationsData }} 
+              ingredients={availableIngredients}
+              autoExpand={true}
             />
           </TabsContent>
 

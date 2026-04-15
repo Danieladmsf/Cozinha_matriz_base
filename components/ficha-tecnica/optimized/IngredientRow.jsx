@@ -14,6 +14,14 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 const IngredientRow = ({
   ingredient,
   prepIndex,
@@ -167,14 +175,46 @@ const IngredientRow = ({
 
     const yieldPercentage = calculateYield();
 
+    // Identificar qual campo é o "Ativo" (último preenchido > 0)
+    const getActiveField = () => {
+      if (parseNumericValue(ingredient.weight_portioned) > 0) return 'weight_portioned';
+      if (parseNumericValue(ingredient.weight_cooked) > 0) return 'weight_cooked';
+      if (parseNumericValue(ingredient.weight_pre_cooking) > 0) return 'weight_pre_cooking';
+      if (parseNumericValue(ingredient.weight_clean) > 0) return 'weight_clean';
+      if (parseNumericValue(ingredient.weight_raw) > 0) return 'weight_raw';
+      if (parseNumericValue(ingredient.weight_thawed) > 0) return 'weight_thawed';
+      if (parseNumericValue(ingredient.weight_frozen) > 0) return 'weight_frozen';
+      return null;
+    };
+
+    const activeField = getActiveField();
+
     return {
       defrostingLoss,
       cleaningLoss,
       cookingLoss,
       portioningLoss,
       yieldPercentage,
+      activeField
     };
   }, [ingredient, prep.processes]);
+
+  // Helper para cores do input ativo
+  const getActiveStyles = (field) => {
+    if (calculatedValues.activeField !== field) return "border-gray-200";
+
+    const styles = {
+      weight_frozen: "border-cyan-500 ring-1 ring-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.2)]",
+      weight_thawed: "border-cyan-500 ring-1 ring-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.2)]",
+      weight_raw: "border-emerald-500 ring-1 ring-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.2)]",
+      weight_clean: "border-emerald-500 ring-1 ring-emerald-200 shadow-[0_0_8px_rgba(16,185,129,0.2)]",
+      weight_pre_cooking: "border-amber-500 ring-1 ring-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.2)]",
+      weight_cooked: "border-amber-500 ring-1 ring-amber-200 shadow-[0_0_8_rgba(245,158,11,0.2)]",
+      weight_portioned: "border-purple-500 ring-1 ring-purple-200 shadow-[0_0_8px_rgba(168,85,247,0.2)]"
+    };
+
+    return `border-2 ${styles[field] || "border-blue-500"}`;
+  };
 
   const updateIngredientField = (field, value) => {
     let cleanValue = String(value);
@@ -211,6 +251,45 @@ const IngredientRow = ({
       <TableCell className="font-medium px-4 py-2 font-mono">
         <div className="flex flex-col">
           <span>{formatCapitalize(ingredient.name)}</span>
+          
+          {/* Seletor de Variações TACO */}
+          {ingredient.taco_variations && ingredient.taco_variations.length > 0 && (
+            <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+              {ingredient.taco_variations.length > 1 ? (
+                <Select
+                  value={ingredient.chosen_taco_id || ingredient.taco_variations.find(v => v.is_base)?.taco_id || ingredient.taco_id}
+                  onValueChange={(val) => {
+                    const variation = ingredient.taco_variations.find(v => v.taco_id === val);
+                    onUpdateIngredient(prepIndex, ingredientIndex, 'chosen_taco_id', val);
+                    if (variation) {
+                      onUpdateIngredient(prepIndex, ingredientIndex, 'chosen_variation_name', variation.variation_name);
+                    }
+                  }}
+                  disabled={readOnly || ingredient.locked}
+                >
+                  <SelectTrigger className="h-6 text-[10px] w-auto min-w-[100px] border-blue-100 bg-blue-50/50 text-blue-700 py-0 px-2 hover:bg-blue-100 transition-colors">
+                    <SelectValue placeholder="Escolha a variação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredient.taco_variations.map((variant) => (
+                      <SelectItem 
+                        key={variant.taco_id} 
+                        value={variant.taco_id}
+                        className="text-xs"
+                      >
+                        {variant.variation_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="outline" className="h-5 text-[9px] font-normal border-gray-100 bg-gray-50 text-gray-500 py-0 px-1.5 flex-shrink-0 w-fit">
+                  Nutrição: {ingredient.taco_variations[0].variation_name}
+                </Badge>
+              )}
+            </div>
+          )}
+
           {ingredient.usage_note && (
             <span className="text-xs text-amber-600 italic mt-0.5 flex items-center gap-1">
               <StickyNote className="h-3 w-3" />
@@ -247,7 +326,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_frozen', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_frozen')}`}
               placeholder="0,000"
             />
           </TableCell>
@@ -259,7 +338,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_thawed', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_thawed')}`}
               placeholder="0,000"
             />
           </TableCell>
@@ -282,7 +361,7 @@ const IngredientRow = ({
                 onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
                 onFocus={(e) => e.target.select()}
                 disabled={readOnly || ingredient.locked}
-                className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_raw')}`}
                 placeholder={(() => {
                   // If purely cleaning (no defrost), raw is the start, so 0,000 is fine?
                   // actually if it's the start, 0,000 is correct.
@@ -310,7 +389,7 @@ const IngredientRow = ({
                   onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
                   onFocus={(e) => e.target.select()}
                   disabled={readOnly || ingredient.locked}
-                  className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_raw')}`}
                   placeholder="0,000"
                   title="Peso de entrada limpo (Fresco)"
                 />
@@ -325,7 +404,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_clean', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_clean')}`}
               placeholder="0,000"
             />
           </TableCell>
@@ -347,7 +426,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_pre_cooking', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_pre_cooking')}`}
               placeholder={(() => {
                 // Inferred Previous Weight Logic for Placeholder
                 const prev = parseNumericValue(ingredient.weight_clean) ||
@@ -366,7 +445,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_cooked', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_cooked')}`}
               placeholder="0,000"
               title="Peso depois da cocção"
             />
@@ -390,7 +469,7 @@ const IngredientRow = ({
                 onBlur={(e) => handleBlurFormat('weight_raw', e.target.value)}
                 onFocus={(e) => e.target.select()}
                 disabled={readOnly || ingredient.locked}
-                className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_frozen')}`}
                 placeholder="0,000"
               />
             </TableCell>
@@ -403,7 +482,7 @@ const IngredientRow = ({
               onBlur={(e) => handleBlurFormat('weight_portioned', e.target.value)}
               onFocus={(e) => e.target.select()}
               disabled={readOnly || ingredient.locked}
-              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              className={`w-24 h-8 text-center text-xs ${readOnly || ingredient.locked ? 'bg-gray-100 cursor-not-allowed' : getActiveStyles('weight_portioned')}`}
               placeholder="0,000"
             />
           </TableCell>

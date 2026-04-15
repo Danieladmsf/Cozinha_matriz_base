@@ -59,13 +59,24 @@ export const IngredientSelectorContent = ({
                 return prev.filter(i => i.id !== item.id);
             } else {
                 // Preparar objeto para seleção
+                const baseVariation = item.taco_variations?.find(v => v.is_base) || item.taco_variations?.[0];
                 const selectedItem = {
                     ...item,
+                    chosen_taco_id: baseVariation?.taco_id || item.taco_id,
+                    chosen_variation_name: baseVariation?.variation_name || "Base",
                     dndId: `dnd-${item.id}-${Date.now()}` // Unique ID for Drag and Drop
                 };
                 return [...prev, selectedItem];
             }
         });
+    };
+
+    const handleUpdateVariation = (itemId, variation) => {
+        setSelectedItems(prev => prev.map(item => 
+            item.id === itemId 
+                ? { ...item, chosen_taco_id: variation.taco_id, chosen_variation_name: variation.variation_name }
+                : item
+        ));
     };
 
     const handleRemoveSelected = (itemId) => {
@@ -163,7 +174,7 @@ export const IngredientSelectorContent = ({
                 </div>
 
                 {/* Right Side: Selected Items & Ordering */}
-                <div className="w-full md:w-1/3 bg-gray-50 flex flex-col border-l border-gray-200">
+                <div className="w-full md:w-[35%] bg-gray-50 flex flex-col border-l border-gray-200">
                     <div className="p-3 bg-gray-100 border-b border-gray-200">
                         <h4 className="font-semibold text-gray-700 text-sm flex items-center justify-between">
                             Selecionados
@@ -207,10 +218,32 @@ export const IngredientSelectorContent = ({
                                                             <div {...provided.dragHandleProps} className="text-gray-400 hover:text-gray-600 cursor-move p-1">
                                                                 <GripVertical className="w-4 h-4" />
                                                             </div>
-                                                            <span className="flex-1 truncate font-medium text-gray-700">{item.name}</span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="truncate font-medium text-gray-700">{item.name}</div>
+                                                                
+                                                                {/* Seletor de Variação TACO no Modal */}
+                                                                {item.taco_variations && item.taco_variations.length > 0 && (
+                                                                    <div className="mt-1">
+                                                                        <select 
+                                                                            className="w-full text-[10px] h-6 border-blue-100 bg-blue-50 text-blue-700 rounded px-1 outline-none focus:ring-1 focus:ring-blue-400"
+                                                                            value={item.chosen_taco_id}
+                                                                            onChange={(e) => {
+                                                                                const v = item.taco_variations.find(v => v.taco_id === e.target.value);
+                                                                                if (v) handleUpdateVariation(item.id, v);
+                                                                            }}
+                                                                        >
+                                                                            {item.taco_variations.map(v => (
+                                                                                <option key={v.taco_id} value={v.taco_id}>
+                                                                                    Nutrição: {v.variation_name}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <button
                                                                 onClick={() => handleRemoveSelected(item.id)}
-                                                                className="text-gray-400 hover:text-red-500 p-1"
+                                                                className="text-gray-400 hover:text-red-500 p-1 self-start mt-1"
                                                             >
                                                                 <X className="w-4 h-4" />
                                                             </button>

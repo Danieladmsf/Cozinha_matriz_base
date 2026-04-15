@@ -98,9 +98,8 @@ export function useRecipeCategorization({
                 };
 
                 typeRoots.forEach(root => {
-                    // Base Label: TYPE | ROOT
-                    // User Requirement: "PRODUTOS | PRODUTOS > MACARRÃO" or "RECEITAS | PRATOS QUENTES"
-                    const rootLabel = `${typeLabel} | ${root.name}`;
+                    // Base Label: ROOT
+                    const rootLabel = root.name;
 
                     // Add Root Item
                     typeItems.push({

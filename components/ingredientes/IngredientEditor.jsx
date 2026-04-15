@@ -82,6 +82,7 @@ export default function IngredientEditor() {
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [initialPrice, setInitialPrice] = useState(null); // Store initial price for comparison
   const [itemType, setItemType] = useState("ingrediente"); // ingrediente ou embalagem
+  const [selectedTacoIds, setSelectedTacoIds] = useState([]); // ✅ Estado para seleção em massa
 
 
   const handleInputChange = (e) => {
@@ -470,6 +471,62 @@ export default function IngredientEditor() {
     }));
   };
 
+  // ✅ Alternar seleção de um item TACO
+  const toggleTacoSelection = (id) => {
+    setSelectedTacoIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  // ✅ Vincular itens selecionados em massa
+  const bulkAddTacoVariations = () => {
+    if (selectedTacoIds.length === 0) return;
+
+    const foodsToAdd = tacoFoods.filter(f => selectedTacoIds.includes(f.id));
+    let newVariations = [...formData.taco_variations];
+    let lastCategory = formData.category;
+
+    foodsToAdd.forEach(food => {
+      // Ignorar se já estiver vinculado
+      if (newVariations.some(v => v.taco_id === food.id)) return;
+
+      const nameLower = food.name.toLowerCase();
+      let variationName = "Cru";
+      let loss = 0;
+
+      if (nameLower.includes("cozido") || nameLower.includes("preparado")) {
+        variationName = "Cozido";
+      } else if (nameLower.includes("frito") || nameLower.includes("grelhado") || nameLower.includes("assado")) {
+        variationName = "Preparado";
+      }
+
+      newVariations.push({
+        taco_id: food.id,
+        taco_name: food.name,
+        variation_name: variationName,
+        loss_percentage: loss,
+        calculated_price: formData.current_price ? parseFloat(formData.current_price) : 0,
+        is_base: newVariations.length === 0,
+        active: true
+      });
+      lastCategory = food.category_name || lastCategory;
+    });
+
+    setFormData(prev => ({
+      ...prev,
+      taco_variations: newVariations,
+      category: lastCategory
+    }));
+
+    setSelectedTacoIds([]);
+    setTacoSearchTerm("");
+
+    toast({
+      title: "Vinculação concluída",
+      description: `${foodsToAdd.length} variações vinculadas com sucesso.`
+    });
+  };
+
   // Verificar se categoria deve ser somente leitura
   const isCategoryReadOnly = formData.taco_variations.length > 0;
 
@@ -486,6 +543,12 @@ export default function IngredientEditor() {
         // Definir tipo do item (ingrediente ou embalagem)
         const currentType = typeParam === 'embalagem' ? 'embalagem' : 'ingrediente';
         setItemType(currentType);
+
+        // ✅ Abrir aba específica se informada na URL (ex: ?tab=taco)
+        const tabParam = urlParams.get('tab');
+        if (tabParam) {
+          setActiveTab(tabParam);
+        }
 
         // ✅ Carregar dados essenciais com tipo correto
         await Promise.all([
@@ -711,10 +774,23 @@ export default function IngredientEditor() {
     );
   }
 
-  const filteredTacoFoods = tacoFoods.filter(food =>
-    food.name.toLowerCase().includes(tacoSearchTerm.toLowerCase()) ||
-    food.description.toLowerCase().includes(tacoSearchTerm.toLowerCase())
-  );
+  const filteredTacoFoods = tacoFoods
+    .filter(food =>
+      food.name.toLowerCase().includes(tacoSearchTerm.toLowerCase()) ||
+      food.description.toLowerCase().includes(tacoSearchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const term = tacoSearchTerm.toLowerCase();
+      const aStarts = a.name.toLowerCase().startsWith(term);
+      const bStarts = b.name.toLowerCase().startsWith(term);
+
+      // Priorizar itens que começam com o termo
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      // Ordenação alfabética padrão (incluindo acentos)
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
 
   return (
     <div>
@@ -1102,17 +1178,50 @@ export default function IngredientEditor() {
 
                 {/* Lista de alimentos TACO para adicionar */}
                 {!loadingTaco && tacoSearchTerm && (
-                  <div className="max-h-40 overflow-y-auto border rounded-lg">
-                    {filteredTacoFoods.slice(0, 5).map(food => (
-                      <div key={food.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer"
-                        onClick={() => addTacoVariation(food)}>
-                        <div className="font-medium">{food.name}</div>
-                        <div className="text-sm text-gray-500">{food.description}</div>
-                        <Badge variant="outline" className="mt-1">{food.category_name}</Badge>
-                      </div>
-                    ))}
-                    {filteredTacoFoods.length === 0 && (
-                      <div className="p-3 text-sm text-gray-500 text-center">Nenhum alimento TACO encontrado.</div>
+                  <div className="space-y-3">
+                    <div className="max-h-60 overflow-y-auto border rounded-lg shadow-inner bg-white">
+                      {filteredTacoFoods.map(food => {
+                        const isSelected = selectedTacoIds.includes(food.id);
+                        return (
+                          <div key={food.id} 
+                            className={cn(
+                              "p-3 border-b last:border-0 hover:bg-blue-50 cursor-pointer transition-colors flex items-center gap-3",
+                              isSelected && "bg-blue-50/50"
+                            )}
+                            onClick={() => toggleTacoSelection(food.id)}>
+                            <div className={cn(
+                              "w-4 h-4 rounded border flex items-center justify-center transition-colors shadow-sm",
+                              isSelected ? "bg-blue-600 border-blue-600" : "bg-white border-gray-300"
+                            )}>
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-sm text-gray-900">{food.name}</div>
+                              <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">{food.description || food.category_name}</div>
+                            </div>
+                            <Badge variant="secondary" className="text-[10px] whitespace-nowrap">
+                              {food.category_name}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                      {filteredTacoFoods.length === 0 && (
+                        <div className="p-8 text-sm text-gray-500 text-center">
+                          <Search className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                          Nenhum alimento TACO encontrado para "{tacoSearchTerm}".
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedTacoIds.length > 0 && (
+                      <Button 
+                        type="button" 
+                        onClick={bulkAddTacoVariations}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all flex items-center justify-center gap-2 h-9"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Vincular {selectedTacoIds.length} itens selecionados
+                      </Button>
                     )}
                   </div>
                 )}
