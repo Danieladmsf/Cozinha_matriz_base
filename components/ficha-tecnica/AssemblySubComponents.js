@@ -214,7 +214,6 @@ const AssemblySubComponents = ({
               <tr className="bg-gray-50">
                 <th className="px-3 py-2 font-medium text-gray-700 text-left">Componente</th>
                 <th className="px-3 py-2 font-medium text-gray-700 text-center">Peso (kg)</th>
-                <th className="px-3 py-2 font-medium text-gray-700 text-center">%</th>
                 <th className="px-3 py-2 font-medium text-gray-700 text-center">Custo</th>
                 <th className="px-3 py-2 font-medium text-gray-700 text-center w-24">Ações</th>
               </tr>
@@ -280,15 +279,6 @@ const AssemblySubComponents = ({
                   </td>
 
                   <td className="px-3 py-2 text-center">
-                    <span className="font-semibold text-indigo-600">
-                      {sc.isPackaging
-                        ? '-'
-                        : `${sc.percentage.toFixed(1).replace('.', ',')}%`
-                      }
-                    </span>
-                  </td>
-
-                  <td className="px-3 py-2 text-center">
                     <span className="font-semibold text-green-600">
                       {formatCurrency(sc.proportionalCost)}
                     </span>
@@ -328,7 +318,6 @@ const AssemblySubComponents = ({
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 text-center font-semibold text-gray-700">100,0%</td>
                 <td className="px-3 py-2 text-center font-bold text-green-700">
                   {formatCurrency(totalCost)}
                 </td>

@@ -251,6 +251,8 @@ const IngredientRow = ({
       <TableCell className="font-medium px-4 py-2 font-mono">
         <div className="flex flex-col">
           <span>{formatCapitalize(ingredient.name)}</span>
+          {/* DEBUG ID LOG - Remover depois */}
+          <span className="hidden" data-debug-ing-id={ingredient.id || ingredient.ingredient_id}></span>
           
           {/* Seletor de Variações TACO */}
           {ingredient.taco_variations && ingredient.taco_variations.length > 0 && (
@@ -283,7 +285,7 @@ const IngredientRow = ({
                   </SelectContent>
                 </Select>
               ) : (
-                <Badge variant="outline" className="h-5 text-[9px] font-normal border-gray-100 bg-gray-50 text-gray-500 py-0 px-1.5 flex-shrink-0 w-fit">
+                <Badge variant="outline" className="h-5 text-[9px] font-medium border-blue-100 bg-blue-50 text-blue-700 py-0 px-1.5 flex-shrink-0 w-fit">
                   Nutrição: {ingredient.taco_variations[0].variation_name}
                 </Badge>
               )}

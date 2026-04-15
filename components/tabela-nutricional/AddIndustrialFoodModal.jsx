@@ -72,6 +72,7 @@ export default function AddIndustrialFoodModal({ onFoodAdded }) {
         fiber_g: parseValue(formData.fiber_g) * factor,
         sodium_mg: parseValue(formData.sodium_mg) * factor,
         source: "Manual (Industrializado)",
+        active: true,
         created_at: new Date()
       };
 

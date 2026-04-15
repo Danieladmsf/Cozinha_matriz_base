@@ -138,7 +138,7 @@ export default function IngredientEditor() {
     try {
       setLoadingTaco(true);
       const tacoData = await NutritionFood.list();
-      setTacoFoods(Array.isArray(tacoData) ? tacoData.filter(f => f.active) : []);
+      setTacoFoods(Array.isArray(tacoData) ? tacoData.filter(f => f.active !== false) : []);
     } catch (err) {
       toast({ variant: "destructive", title: "Erro ao carregar TACO", description: err.message });
     } finally {
@@ -190,7 +190,7 @@ export default function IngredientEditor() {
       } else {
         // Para ingredientes, filtrar tipo ingredientes
         filteredCats = categoryTreeData.filter(cat =>
-          (cat.type === "ingredient" || cat.type === "ingredientes") && cat.active
+          cat.type === "ingredientes" && cat.active
         );
       }
 
@@ -716,10 +716,20 @@ export default function IngredientEditor() {
 
           const fieldsToSync = {
             name: formData.name,
+            commercial_name: formData.commercial_name || "",
             unit: formData.unit,
             category: formData.category,
-            current_price: newPrice !== undefined ? newPrice : parseFloat(formData.current_price)
+            current_price: newPrice !== undefined ? newPrice : parseFloat(formData.current_price),
+            main_supplier: formData.main_supplier || "",
+            supplier_id: formData.supplier_id || "",
+            brand: formData.brand || "",
+            brand_id: formData.brand_id || "",
+            item_type: itemType || "ingrediente",
+            taco_id: formData.taco_id || (formData.taco_variations && formData.taco_variations.length > 0 ? formData.taco_variations[0].taco_id : null),
+            taco_variations: formData.taco_variations || []
           };
+          console.log(`[DEBUG-TACO] [IngredientEditor] Disparando cascata para o ingrediente ID: ${currentIngredientId}`);
+          console.log(`[DEBUG-TACO] [IngredientEditor] fieldsToSync enviado:`, JSON.stringify(fieldsToSync, null, 2));
 
           const { updatedCount, logs } = await syncIngredientAcrossRecipes(currentIngredientId, fieldsToSync, oldName);
 

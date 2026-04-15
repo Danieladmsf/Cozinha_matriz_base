@@ -234,17 +234,22 @@ export default function NutritionalInfo({ recipe, autoExpand = false }) {
       let finalWeight = RecipeEngine.getFinalWeight(recipeIng);
       
       // Normalização para gramas (G)
-      if (recipeIng.unit === 'kg' || !recipeIng.unit) {
+      const unit = (recipeIng.unit || '').toLowerCase();
+      if (unit === 'kg' || unit === '') {
         finalWeight *= 1000;
       }
 
       if (finalWeight <= 0) return;
       totalEffectiveWeight += finalWeight;
 
-      console.log(`   🔸 Ingrediente: ${ingredient.name} | Peso: ${finalWeight.toFixed(1)}g`);
-
+      console.log(`   🔸 Ingrediente: ${ingredient.name} | Peso Final: ${finalWeight.toFixed(1)}g | Taco ID: ${chosenTacoId}`);
+      console.log(`   🔸 TACO Encontrado:`, nutritionData);
+      
       Object.keys(NUTRIENT_UNITS).forEach(nutrient => {
-        const val = parseFloat(nutritionData[nutrient]);
+        let rawVal = nutritionData[nutrient];
+        // Ensure string is correctly formatted before parseFloat (handles comma)
+        if (typeof rawVal === 'string') rawVal = rawVal.replace(',', '.');
+        const val = parseFloat(rawVal);
         if (!isNaN(val)) {
           const contribution = (val * finalWeight) / 100;
           values[nutrient] = (values[nutrient] || 0) + contribution;
@@ -262,7 +267,8 @@ export default function NutritionalInfo({ recipe, autoExpand = false }) {
           if (!subRecipe) return;
 
           let quantityUsed = RecipeEngine.parseValue(subRecipeItem.used_weight);
-          if (subRecipeItem.unit === 'kg' || !subRecipeItem.unit) quantityUsed *= 1000;
+          const subUnit = (subRecipeItem.unit || '').toLowerCase();
+          if (subUnit === 'kg' || subUnit === '') quantityUsed *= 1000;
           
           if (quantityUsed <= 0) return;
           totalEffectiveWeight += quantityUsed;
@@ -287,10 +293,13 @@ export default function NutritionalInfo({ recipe, autoExpand = false }) {
             if (!sNutri) return;
 
             let sWeight = RecipeEngine.getFinalWeight(sIng);
-            if (sIng.unit === 'kg' || !sIng.unit) sWeight *= 1000;
+            const sUnit = (sIng.unit || '').toLowerCase();
+            if (sUnit === 'kg' || sUnit === '') sWeight *= 1000;
 
             Object.keys(NUTRIENT_UNITS).forEach(n => {
-              const v = parseFloat(sNutri[n]);
+              let rawV = sNutri[n];
+              if (typeof rawV === 'string') rawV = rawV.replace(',', '.');
+              const v = parseFloat(rawV);
               if (!isNaN(v)) subValues[n] = (subValues[n] || 0) + (v * sWeight) / 100;
             });
           });
