@@ -1,6 +1,7 @@
 import { db } from '@/lib/firebase';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { NextResponse } from 'next/server';
+import { getDocRef } from '@/app/api/entities';
 
 // POST /api/ingredients/cleanup - Limpar ingredientes duplicados antigos
 export async function POST(request) {
@@ -18,7 +19,7 @@ export async function POST(request) {
 
     for (const id of ids) {
       try {
-        const docRef = doc(db, 'Ingredient', id);
+        const docRef = getDocRef('Ingredient', id);
 
         if (action === 'delete') {
           await deleteDoc(docRef);

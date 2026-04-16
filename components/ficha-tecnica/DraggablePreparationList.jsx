@@ -6,12 +6,13 @@ import {
 } from "@/components/ui";
 import {
     List, ChevronDown, ChevronUp, Check, X, Edit, Trash2, StickyNote,
-    CookingPot, Settings2, RefreshCw, Link2, Camera
+    CookingPot, Settings2, RefreshCw, Link2, Camera, Sparkles
 } from "lucide-react";
 import IngredientTable from "./IngredientTable";
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import { RECIPE_TYPES } from "@/lib/recipeConstants";
 import { toast } from "@/components/ui/use-toast";
+import AiAssistantChat from "./AiAssistantChat";
 
 const DraggablePreparationList = ({
     preparations,
@@ -66,6 +67,7 @@ const DraggablePreparationList = ({
     });
     const [editingTitle, setEditingTitle] = useState(null); // Index being edited
     const [tempTitle, setTempTitle] = useState('');
+    const [activeAiChatPrepIndex, setActiveAiChatPrepIndex] = useState(null);
 
     // Assegura que novas preparações ou ao carregar a receita abram expandidas
     React.useEffect(() => {
@@ -773,15 +775,26 @@ const DraggablePreparationList = ({
                                                                                     ))}
                                                                             </div>
                                                                         )}
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            onClick={(e) => { e.stopPropagation(); startEditingNote(index); }}
-                                                                            className="w-full text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
-                                                                        >
-                                                                            <StickyNote className="h-4 w-4 mr-2" />
-                                                                            Adicionar Nota (Passo)
-                                                                        </Button>
+                                                                        <div className="flex gap-2 w-full mt-2">
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                onClick={(e) => { e.stopPropagation(); startEditingNote(index); }}
+                                                                                className="w-full text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700 font-semibold"
+                                                                            >
+                                                                                <StickyNote className="h-4 w-4 mr-2" />
+                                                                                Adicionar Passo
+                                                                            </Button>
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                onClick={(e) => { e.stopPropagation(); setActiveAiChatPrepIndex(index); }}
+                                                                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:from-blue-700 hover:to-indigo-700 shadow-sm font-semibold"
+                                                                            >
+                                                                                <Sparkles className="h-4 w-4 mr-2 text-white" />
+                                                                                Agente I.A.
+                                                                            </Button>
+                                                                        </div>
                                                                     </>
                                                                 )}
                                                             </CardFooter>
@@ -798,6 +811,35 @@ const DraggablePreparationList = ({
                     </div>
                 )}
             </Droppable>
+
+            {activeAiChatPrepIndex !== null && (
+                <AiAssistantChat 
+                    prep={preparations[activeAiChatPrepIndex]}
+                    onClose={() => setActiveAiChatPrepIndex(null)}
+                    onUpdateHistory={(newHistory) => {
+                        setPreparations(prev => {
+                            const newData = [...prev];
+                            newData[activeAiChatPrepIndex] = {
+                                ...newData[activeAiChatPrepIndex],
+                                aiHistory: newHistory
+                            };
+                            return newData;
+                        });
+                        onDirty(true);
+                    }}
+                    onApplyNotes={(newNotes) => {
+                        setPreparations(prev => {
+                            const newData = [...prev];
+                            newData[activeAiChatPrepIndex] = {
+                                ...newData[activeAiChatPrepIndex],
+                                notes: newNotes
+                            };
+                            return newData;
+                        });
+                        onDirty(true);
+                    }}
+                />
+            )}
         </DragDropContext>
     );
 };

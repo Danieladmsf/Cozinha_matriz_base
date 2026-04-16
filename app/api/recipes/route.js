@@ -5,6 +5,8 @@
 
 import { Recipe } from '../entities.js';
 
+export const dynamic = 'force-dynamic';
+
 // Função para remover acentos e normalizar string
 function removeAccents(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCollectionRef } from '@/app/api/entities';
 
 export async function GET() {
     try {
-        const recipesRef = collection(db, 'Recipe');
+        const recipesRef = getCollectionRef('Recipe');
         const snapshot = await getDocs(recipesRef);
 
         const ghosts = [];

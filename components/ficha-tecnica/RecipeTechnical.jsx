@@ -134,7 +134,8 @@ export default function RecipeTechnical() {
     activeTab, setActiveTab,
     searchQuery, setSearchQuery,
     searchOpen, setSearchOpen,
-
+    showConfigDialog, setShowConfigDialog,
+    aiConfig, setAiConfig,
 
     // Estados de modais
     searchModalOpen, setSearchModalOpen,
@@ -145,6 +146,7 @@ export default function RecipeTechnical() {
     isPrintDialogOpen, setIsPrintDialogOpen,
     isPrintCollectDialogOpen, setIsPrintCollectDialogOpen,
     isPrintSimpleDialogOpen, setIsPrintSimpleDialogOpen,
+    isImportTextModalOpen, setIsImportTextModalOpen,
 
     // Estados de dados externos
     categories, setCategories,
@@ -707,6 +709,83 @@ export default function RecipeTechnical() {
     refreshIngredients();
   }, [toast]);
 
+  // ==== EFFECT PARA CARREGAR CONFIGURAÇÃO DA I.A. GALO ====
+  useEffect(() => {
+    const loadAiConfig = async () => {
+      try {
+        const { db } = await import('@/lib/firebase');
+        const { doc, getDoc, collection, query, orderBy, getDocs } = await import('firebase/firestore');
+        
+        // 1. Pegar Perfil Ativo
+        const configRef = doc(db, 'settings', 'ai_config');
+        const configSnap = await getDoc(configRef);
+        
+        if (configSnap.exists()) {
+          const activeProfileId = configSnap.data().activeProfileId;
+          
+          if (activeProfileId) {
+            const profileRef = doc(db, 'settings', 'ai_config', 'profiles', activeProfileId);
+            const profileSnap = await getDoc(profileRef);
+            
+            if (profileSnap.exists()) {
+              setAiConfig(profileSnap.data());
+            }
+          } else {
+            // Legado ou Fallback
+            setAiConfig(configSnap.data());
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar config da IA:", err);
+      }
+    };
+    loadAiConfig();
+  }, []);
+
+  // ==== HANDLER DE IMPORTAÇÃO RELÂMPAGO ====
+  const handleImportFromText = (importData) => {
+    const { title, ingredients: matchedIngredients, missingItems } = importData;
+    
+    // 1. Criar a nova preparação
+    const newPrep = {
+      title: title || `${preparationsData.length + 1}º Etapa: Importada`,
+      ingredients: matchedIngredients.map(ing => {
+        let rawWeight = ing.weight_raw || 0;
+        let cookedWeight = rawWeight;
+        
+        // Verifica o fator de perda de cocção trazido da tabela base
+        if (ing.cooking_loss_pct) {
+           const lossStr = String(ing.cooking_loss_pct).replace(',', '.');
+           const loss = parseFloat(lossStr) || 0;
+           cookedWeight = rawWeight * (1 - (loss / 100));
+        }
+
+        // Formata para o padrão visual (XX,XXX)
+        const formatNum = (num) => Number(num).toFixed(3).replace('.', ',');
+
+        return {
+          ...ing,
+          id: String(Date.now() + Math.random()),
+          weight_raw: rawWeight ? formatNum(rawWeight) : 0,
+          weight_pre_cooking: rawWeight ? formatNum(rawWeight) : 0,
+          weight_cooked: cookedWeight ? formatNum(cookedWeight) : 0,
+        };
+      }),
+      processes: ['cooking'],
+      instructions: missingItems.length > 0 
+        ? `Obs: Itens não encontrados para vincular: ${missingItems.join(', ')}` 
+        : ''
+    };
+
+    addPreparation(preparationsData, setPreparationsData, newPrep);
+    setIsDirty(true);
+    
+    toast({
+      title: "Mágica realizada!",
+      description: `Etapa "${newPrep.title}" criada com ${matchedIngredients.length} ingredientes.`,
+    });
+  };
+
   // ==== EFFECT PARA CARREGAR RECEITA DA URL ====
   const searchParams = useSearchParams();
   const lastLoadedUrlId = React.useRef(null);
@@ -1069,6 +1148,7 @@ export default function RecipeTechnical() {
               removePreparation={removePreparation}
 
               handleSaveRecipe={handleSaveRecipe}
+              setIsImportTextModalOpen={setIsImportTextModalOpen}
             />
           </TabsContent>
 
@@ -1098,6 +1178,11 @@ export default function RecipeTechnical() {
           preparationsData={preparationsData}
           currentRecipeId={currentRecipeId}
           recipeData={recipeData}
+
+          isImportTextModalOpen={isImportTextModalOpen}
+          setIsImportTextModalOpen={setIsImportTextModalOpen}
+          handleImportFromText={handleImportFromText}
+          aiConfig={aiConfig}
 
           ingredientModalOpen={ingredientModalOpen}
           recipeModalOpen={recipeModalOpen}

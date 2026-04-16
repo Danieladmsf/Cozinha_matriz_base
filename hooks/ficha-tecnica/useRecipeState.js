@@ -38,6 +38,12 @@ export function useRecipeState() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
+  const [aiConfig, setAiConfig] = useState({
+    aiProvider: 'gemini',
+    apiKey: '',
+    baseUrl: '',
+    masterPrompt: ''
+  });
 
   // Estados de modais
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -48,6 +54,7 @@ export function useRecipeState() {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isPrintCollectDialogOpen, setIsPrintCollectDialogOpen] = useState(false);
   const [isPrintSimpleDialogOpen, setIsPrintSimpleDialogOpen] = useState(false);
+  const [isImportTextModalOpen, setIsImportTextModalOpen] = useState(false);
 
   // Estados de dados externos
   const [categories, setCategories] = useState([]);
@@ -113,6 +120,7 @@ export function useRecipeState() {
     setIsPrintDialogOpen(false);
     setIsPrintCollectDialogOpen(false);
     setIsPrintSimpleDialogOpen(false);
+    setIsImportTextModalOpen(false);
   }, []);
 
   return {
@@ -134,6 +142,7 @@ export function useRecipeState() {
     searchQuery, setSearchQuery,
     searchOpen, setSearchOpen,
     showConfigDialog, setShowConfigDialog,
+    aiConfig, setAiConfig,
 
     // Estados de modais
     searchModalOpen, setSearchModalOpen,
@@ -144,6 +153,7 @@ export function useRecipeState() {
     isPrintDialogOpen, setIsPrintDialogOpen,
     isPrintCollectDialogOpen, setIsPrintCollectDialogOpen,
     isPrintSimpleDialogOpen, setIsPrintSimpleDialogOpen,
+    isImportTextModalOpen, setIsImportTextModalOpen,
 
     // Estados de dados externos
     categories, setCategories,

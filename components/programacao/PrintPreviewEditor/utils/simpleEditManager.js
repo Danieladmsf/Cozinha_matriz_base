@@ -6,6 +6,7 @@
 
 import { db } from '@/lib/firebase';
 import { doc, setDoc, getDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { getDocRef } from '@/app/api/entities';
 
 const STORAGE_KEY = 'print_preview_edits_v2';
 const FIRESTORE_COLLECTION = 'programming_edits';
@@ -267,7 +268,7 @@ export async function saveEditsToFirebase(weekDayKey, edits) {
   }
 
   try {
-    const docRef = doc(db, FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(FIRESTORE_COLLECTION, weekDayKey);
     await setDoc(docRef, {
       edits,
       lastModified: new Date().toISOString(),
@@ -289,7 +290,7 @@ export async function loadEditsFromFirebase(weekDayKey) {
   }
 
   try {
-    const docRef = doc(db, FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(FIRESTORE_COLLECTION, weekDayKey);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -314,7 +315,7 @@ export function subscribeToEdits(weekDayKey, callback) {
     return () => {};
   }
 
-  const docRef = doc(db, FIRESTORE_COLLECTION, weekDayKey);
+  const docRef = getDocRef(FIRESTORE_COLLECTION, weekDayKey);
 
   const unsubscribe = onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
@@ -340,7 +341,7 @@ export async function clearEditsFromFirebase(weekDayKey) {
   }
 
   try {
-    const docRef = doc(db, FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(FIRESTORE_COLLECTION, weekDayKey);
     await deleteDoc(docRef);
   } catch (error) {
     throw error;
@@ -435,7 +436,7 @@ export async function saveBlockOrderToFirebase(weekDayKey, blockOrder) {
       numBlocks: blockOrder.length,
       order: blockOrder
     });
-    const docRef = doc(db, BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
     await setDoc(docRef, {
       order: blockOrder,
       lastModified: new Date().toISOString(),
@@ -461,7 +462,7 @@ export async function loadBlockOrderFromFirebase(weekDayKey) {
 
   try {
     console.log('[loadBlockOrderFromFirebase] 📡 Carregando do Firebase:', weekDayKey);
-    const docRef = doc(db, BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
@@ -492,7 +493,7 @@ export function subscribeToBlockOrder(weekDayKey, callback) {
     return () => {};
   }
 
-  const docRef = doc(db, BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
+  const docRef = getDocRef(BLOCK_ORDER_FIRESTORE_COLLECTION, weekDayKey);
 
   const unsubscribe = onSnapshot(docRef, (docSnap) => {
     if (docSnap.exists()) {
@@ -580,7 +581,7 @@ export async function saveCustomBlocksToFirebase(weekDayKey, customBlocks) {
       blocks: customBlocks.map(b => ({ id: b.id, title: b.title, isDuplicated: b.isDuplicated }))
     });
 
-    const docRef = doc(db, CUSTOM_BLOCKS_FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(CUSTOM_BLOCKS_FIRESTORE_COLLECTION, weekDayKey);
     await setDoc(docRef, {
       customBlocks,
       updatedAt: new Date().toISOString()
@@ -605,7 +606,7 @@ export async function loadCustomBlocksFromFirebase(weekDayKey) {
 
   try {
     console.log('[loadCustomBlocksFromFirebase] 📡 Carregando do Firebase:', weekDayKey);
-    const docRef = doc(db, CUSTOM_BLOCKS_FIRESTORE_COLLECTION, weekDayKey);
+    const docRef = getDocRef(CUSTOM_BLOCKS_FIRESTORE_COLLECTION, weekDayKey);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {

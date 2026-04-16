@@ -3,6 +3,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { db } from "@/lib/firebase";
 import { useToast } from "@/components/ui";
 import { RecipeEngine as RecipeCalculator } from "@/lib/recipe-engine/RecipeEngine";
+import { getDocRef, getCollectionRef } from "@/app/api/entities";
 
 /**
  * Hook para gerenciar lógicas complexas de Sincronização e Atualização Massiva
@@ -40,7 +41,7 @@ export function useRecipeSync({
             // Buscar receitas fonte atualizadas
             const sourceRecipes = {};
             for (const id of sourceIds) {
-                const docRef = doc(db, "Recipe", id);
+                const docRef = getDocRef("Recipe", id);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     sourceRecipes[id] = { id: docSnap.id, ...docSnap.data() };
@@ -154,7 +155,7 @@ export function useRecipeSync({
 
         try {
             // Buscar TODOS os ingredientes ativos do banco
-            const q = query(collection(db, "Ingredient"), where("active", "!=", false));
+            const q = query(getCollectionRef("Ingredient"), where("active", "!=", false));
             const querySnapshot = await getDocs(q);
 
 
@@ -274,7 +275,7 @@ export function useRecipeSync({
                     const originId = subComp.origin_id || (sourcePrep && sourcePrep.origin_id);
                     if (originId) {
                         try {                            // Buscar dados frescos da receita original
-                            const recipeRef = doc(db, 'Recipe', originId);
+                            const recipeRef = getDocRef('Recipe', originId);
                             const recipeSnap = await getDoc(recipeRef);
 
                             if (recipeSnap.exists()) {

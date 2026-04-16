@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { Ingredient } from "@/app/api/entities";
+import { Ingredient, Employee } from "@/app/api/entities";
 import { propagateIngredientUpdate } from "@/lib/services/recipePropagationService";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -22,10 +22,11 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Save, Clock, TrendingDown, TrendingUp } from "lucide-react";
+import { Search, Save, Clock, TrendingDown, TrendingUp, Package } from "lucide-react";
 
 export default function IngredientTechnicalAnalysis() {
     const [ingredients, setIngredients] = useState([]);
+    const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [saving, setSaving] = useState(false);
@@ -42,7 +43,12 @@ export default function IngredientTechnicalAnalysis() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const ingData = await Ingredient.list();
+            const [ingData, empData] = await Promise.all([
+                Ingredient.list(),
+                Employee.list()
+            ]);
+
+            setEmployees(empData.filter(e => e.active !== false));
 
             // Filtrar apenas ativos e ordenar por nome
             const activeIngredients = ingData
@@ -120,9 +126,16 @@ export default function IngredientTechnicalAnalysis() {
                 labor_role_id: techData.labor_role_id || null
             };
 
+            console.log('===== [DEBUG SAVE] =====');
+            console.log('[DEBUG SAVE] ingredient.id:', ingredient.id);
+            console.log('[DEBUG SAVE] ingredient.name:', ingredient.name);
+            console.log('[DEBUG SAVE] technicalData que será salva:', JSON.stringify(technicalData, null, 2));
+
             await Ingredient.update(ingredient.id, {
                 technical_data: technicalData
             });
+
+            console.log('[DEBUG SAVE] ✅ Ingredient.update executado com sucesso no Firestore');
 
             // Remover do conjunto de sujos
             setDirtyIds(prev => {
@@ -139,10 +152,20 @@ export default function IngredientTechnicalAnalysis() {
             // PROPAGAÇÃO EM MASSA
             // Atualizar todas as receitas que usam este ingrediente
             try {
+                console.log('[DEBUG SAVE] 🚀 Chamando propagateIngredientUpdate...');
+                console.log('[DEBUG SAVE] Payload para propagação:', JSON.stringify({
+                    id: ingredient.id,
+                    name: ingredient.name,
+                    current_price: ingredient.current_price,
+                    technical_data: technicalData
+                }, null, 2));
+
                 const propResult = await propagateIngredientUpdate(ingredient.id, {
                     ...ingredient,
                     technical_data: technicalData
                 });
+
+                console.log('[DEBUG SAVE] 📊 Resultado da propagação:', JSON.stringify(propResult, null, 2));
 
                 if (propResult.count > 0) {
                     toast({
@@ -150,16 +173,22 @@ export default function IngredientTechnicalAnalysis() {
                         description: `${propResult.count} receitas atualizadas automáticamente!`,
                         className: "bg-green-50 border-green-200 text-green-800"
                     });
+                } else {
+                    console.log('[DEBUG SAVE] ⚠️ Propagação retornou count=0. Nenhuma receita afetada.');
+                    console.log('[DEBUG SAVE] errors:', propResult.errors);
                 }
             } catch (propError) {
-                console.error("Erro na propagação:", propError);
+                console.error("[DEBUG SAVE] ❌ ERRO na propagação:", propError);
+                console.error("[DEBUG SAVE] Stack:", propError.stack);
                 toast({
                     title: "Aviso",
-                    description: "Erro ao propagar mudanças para receitas.",
+                    description: "Erro ao propagar mudanças para receitas: " + propError.message,
                     variant: "warning"
                 });
             }
         } catch (error) {
+            console.error("[DEBUG SAVE] ❌ ERRO ao salvar ingrediente:", error);
+            console.error("[DEBUG SAVE] Stack:", error.stack);
             toast({
                 variant: "destructive",
                 title: "Erro ao salvar",
@@ -167,6 +196,7 @@ export default function IngredientTechnicalAnalysis() {
             });
         } finally {
             setSaving(false);
+            console.log('===== [DEBUG SAVE] FIM =====');
         }
     };
 

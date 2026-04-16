@@ -8,6 +8,7 @@ import RecipeLaborModal from "@/components/receitas/RecipeLaborModal";
 import RecipeTechnicalPrintDialog from "./RecipeTechnicalPrintDialog";
 import RecipeCollectDialog from "./RecipeCollectDialog";
 import RecipeSimplePrintDialog from "./RecipeSimplePrintDialog";
+import { RecipeImportTextModal } from "./RecipeImportTextModal";
 
 /**
  * Agregador de Modais do Ficha Técnica para limpar o arquivo principal.
@@ -20,6 +21,12 @@ export function RecipeModalsWrapper({
     preparationsData,
     currentRecipeId,
     recipeData,
+
+    // Importação por Texto
+    isImportTextModalOpen,
+    setIsImportTextModalOpen,
+    handleImportFromText,
+    aiConfig,
 
     // Seleção Unificada
     ingredientModalOpen,
@@ -153,12 +160,21 @@ export function RecipeModalsWrapper({
                 onClose={() => setIsPrintCollectDialogOpen(false)}
             />
 
-            {/* DiÃ¡logo de ImpressÃ£o da Receita AjustÃ¡vel */}
+            {/* Diálogo de Impressão da Receita Ajustável */}
             <RecipeSimplePrintDialog
                 recipe={recipeData}
                 preparations={preparationsData}
                 isOpen={isPrintSimpleDialogOpen}
                 onClose={() => setIsPrintSimpleDialogOpen(false)}
+            />
+
+            {/* Modal de Importação por Texto */}
+            <RecipeImportTextModal 
+                isOpen={isImportTextModalOpen}
+                onClose={() => setIsImportTextModalOpen(false)}
+                onImport={handleImportFromText}
+                availableIngredients={availableIngredients}
+                aiConfig={aiConfig}
             />
         </>
     );

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash --version)",
+      "Bash(chmod +x /usr/local/bin/jq.exe)",
+      "Bash(jq --version)",
+      "Bash(mkdir -p \"/c/Users/Administrador/bin\")",
+      "Bash(mv \"/c/Users/Administrador/Desktop/COZINHA MATRIZ BASE/jq.exe\" \"/c/Users/Administrador/bin/jq.exe\")",
+      "Bash(\"/c/Users/Administrador/bin/jq.exe\" --version)",
+      "Bash(cp \"/c/Users/Administrador/bin/jq.exe\" \"/usr/local/bin/jq.exe\")",
+      "Bash(cp \"/c/Users/Administrador/bin/jq.exe\" \"/usr/bin/jq.exe\")",
+      "Read(//usr/local/bin/**)",
+      "Bash(cp \"/c/Users/Administrador/bin/jq.exe\" \"/mingw64/bin/jq.exe\")",
+      "Bash(/mingw64/bin/jq.exe --version)",
+      "Bash(cp \"/c/Users/Administrador/bin/jq.exe\" \"/c/Users/Administrador/Desktop/COZINHA MATRIZ BASE/jq.exe\")",
+      "Bash(\"/c/Users/Administrador/Desktop/COZINHA MATRIZ BASE/jq.exe\" --version)",
+      "Bash(xxd)"
+    ]
+  }
+}

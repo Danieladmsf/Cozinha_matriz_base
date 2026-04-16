@@ -16,6 +16,41 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase.js';
+import { getTenantId, getTenantIdFromRequest } from '../../lib/auth/tenantStore.js';
+
+// ============================================
+// MULTI-TENANT HELPERS
+// ============================================
+
+/**
+ * Resolve o caminho da coleção baseado no tenant ativo
+ * Se há tenant → tenants/{tenantId}/{collectionName}
+ * Se não há → {collectionName} (fallback para compatibilidade)
+ */
+function getCollectionRef(collectionName) {
+    const tenantId = getTenantId();
+    if (tenantId) {
+        return collection(db, 'tenants', tenantId, collectionName);
+    }
+    // Fallback: coleção raiz (para migração ou scripts)
+    console.warn(`[entities] ⚠️ Sem tenantId! Usando coleção raiz: ${collectionName}`);
+    return collection(db, collectionName);
+}
+
+/**
+ * Resolve a referência do documento baseado no tenant ativo
+ */
+function getDocRef(collectionName, docId) {
+    const tenantId = getTenantId();
+    if (tenantId) {
+        return doc(db, 'tenants', tenantId, collectionName, docId);
+    }
+    console.warn(`[entities] ⚠️ Sem tenantId! Usando doc raiz: ${collectionName}/${docId}`);
+    return doc(db, collectionName, docId);
+}
+
+// Export helpers for direct Firestore calls outside entities.js
+export { getCollectionRef, getDocRef, getTenantId };
 
 // Firebase Collection Helper
 const createEntity = (collectionName) => {
@@ -24,7 +59,7 @@ const createEntity = (collectionName) => {
     getAll: async () => {
       try {
         // Usa getDocs para aproveitar o cache offline primeiro
-        const querySnapshot = await getDocs(collection(db, collectionName));
+        const querySnapshot = await getDocs(getCollectionRef(collectionName));
         const docs = querySnapshot.docs.map(doc => {
           const data = doc.data();
           const docId = doc.id;
@@ -53,7 +88,7 @@ const createEntity = (collectionName) => {
       try {
         // CORRIGIDO: Usar getDocsFromServer para garantir dados frescos do servidor
         // getDocs usava o cache offline, causando bug de "exclusão fantasma"
-        const querySnapshot = await getDocsFromServer(collection(db, collectionName));
+        const querySnapshot = await getDocsFromServer(getCollectionRef(collectionName));
 
         const docs = querySnapshot.docs.map(doc => {
           // IMPORTANTE: Colocar id: doc.id DEPOIS do spread para garantir que o ID do Firestore seja usado
@@ -93,7 +128,7 @@ const createEntity = (collectionName) => {
         }
 
         console.log(`🔵 [${collectionName}.getById] Criando referência do documento...`);
-        const docRef = doc(db, collectionName, id);
+        const docRef = getDocRef(collectionName, id);
         console.log(`🔵 [${collectionName}.getById] Referência criada:`, docRef.path);
 
         // Add timeout wrapper for Firestore operations
@@ -165,7 +200,7 @@ const createEntity = (collectionName) => {
           updatedAt: currentTime
         };
 
-        const docRef = await addDoc(collection(db, collectionName), docData);
+        const docRef = await addDoc(getCollectionRef(collectionName), docData);
 
         const createTime = Date.now() - startTime;
         console.log(`✅ [${collectionName.toUpperCase()}.CREATE] Sucesso:`, {
@@ -196,7 +231,7 @@ const createEntity = (collectionName) => {
 
     // Create new document with a specific ID
     createWithId: async (id, data) => {
-      const docRef = doc(db, collectionName, id);
+      const docRef = getDocRef(collectionName, id);
       const docData = {
         ...data,
         createdAt: new Date(),
@@ -229,7 +264,7 @@ const createEntity = (collectionName) => {
       const startTime = Date.now();
 
       try {
-        const docRef = doc(db, collectionName, id);
+        const docRef = getDocRef(collectionName, id);
         const updateData = {
           ...data,
           updatedAt: currentTime
@@ -268,7 +303,7 @@ const createEntity = (collectionName) => {
     // Delete document
     delete: async (id) => {
       try {
-        const docRef = doc(db, collectionName, id);
+        const docRef = getDocRef(collectionName, id);
 
         // Verificar se o documento existe antes de deletar (forçar leitura do servidor)
         const docSnapshot = await getDocFromServer(docRef);
@@ -293,7 +328,7 @@ const createEntity = (collectionName) => {
         value
       }));
       try {
-        let q = collection(db, collectionName);
+        let q = getCollectionRef(collectionName);
         const constraints = filters.map(f => where(f.field, f.operator, f.value));
         q = query(q, ...constraints);
         
@@ -307,7 +342,7 @@ const createEntity = (collectionName) => {
     // Query with filters
     query: async (filters = [], orderByField = null, limitCount = null) => {
       try {
-        let q = collection(db, collectionName);
+        let q = getCollectionRef(collectionName);
 
         if (filters.length > 0) {
           const constraints = filters.map(filter => where(filter.field, filter.operator, filter.value));
@@ -334,7 +369,7 @@ const createEntity = (collectionName) => {
     // Listen to real-time updates
     listen: (callback, filters = [], orderByField = null, limitCount = null) => {
       try {
-        let q = collection(db, collectionName);
+        let q = getCollectionRef(collectionName);
 
         if (filters.length > 0) {
           const constraints = filters.map(filter => where(filter.field, filter.operator, filter.value));
@@ -408,7 +443,8 @@ export const WorkflowProcess = createEntity('WorkflowProcess');
 export const SalesHistory = createEntity('sales_history');
 export const DailyAssignment = createEntity('DailyAssignment');
 
-// User entity
+// User entity — GLOBAL (não multi-tenant)
+// User fica na raiz porque precisa ser acessível antes do tenant ser resolvido
 export const UserEntity = createEntity('User');
 
 // Auth with User methods
@@ -427,6 +463,7 @@ export const User = {
         updatedAt: new Date()
       };
 
+      // User é GLOBAL — sempre doc(db, 'User', ...)
       const docRef = doc(db, 'User', userId);
       await setDoc(docRef, newUserData);
 
@@ -436,64 +473,58 @@ export const User = {
     }
   },
 
-  // Get current user data - No authentication required
+  // Get current user data from Firebase Auth
   me: async () => {
-    return new Promise((resolve, reject) => {
-      // Return mock user data for development without authentication
-      resolve({
-        id: 'mock-user-id',
-        email: 'dev@cozinhaafeto.com',
-        displayName: 'Usuário de Desenvolvimento',
-        photoURL: null
-      });
-    });
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      return {
+        id: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        photoURL: currentUser.photoURL
+      };
+    }
+    return null;
   },
 
-  // Get user data - Load from Firestore
+  // Get user data from Firestore
   getMyUserData: async () => {
     try {
-      const userId = 'mock-user-id'; // Em produção, pegar do usuário autenticado
+      const currentUser = auth.currentUser;
+      if (!currentUser) return null;
 
-      const userData = await UserEntity.getById(userId);
-      return userData;
+      const userDoc = await getDoc(doc(db, 'User', currentUser.uid));
+      if (userDoc.exists()) {
+        return { ...userDoc.data(), id: userDoc.id };
+      }
+      return null;
     } catch (error) {
       return null;
     }
   },
 
-  // Update user data - Save to Firestore
+  // Update user data in Firestore
   updateMyUserData: async (userData) => {
     try {
-      const userId = 'mock-user-id'; // Em produção, pegar do usuário autenticado
+      const currentUser = auth.currentUser;
+      if (!currentUser) throw new Error('Usuário não autenticado');
 
+      const userId = currentUser.uid;
+      const userDocRef = doc(db, 'User', userId);
+      const userSnap = await getDoc(userDocRef);
 
-      // Primeiro, tenta buscar o usuário existente
-      let existingUser = null;
-      try {
-        existingUser = await UserEntity.getById(userId);
-      } catch (error) {
-      }
-
-      if (existingUser) {
-        // Se existe, atualiza usando update
-        const updatedData = {
-          ...existingUser,
+      if (userSnap.exists()) {
+        await updateDoc(userDocRef, {
           ...userData,
           updatedAt: new Date()
-        };
-        await UserEntity.update(userId, updatedData);
+        });
       } else {
-        // Se não existe, cria usando setDoc com o ID específico
-        const newUserData = {
+        await setDoc(userDocRef, {
           id: userId,
           ...userData,
           createdAt: new Date(),
           updatedAt: new Date()
-        };
-
-        // Usar setDoc ao invés de create para especificar o ID
-        const docRef = doc(db, 'User', userId);
-        await setDoc(docRef, newUserData);
+        });
       }
 
       return {

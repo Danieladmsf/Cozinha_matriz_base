@@ -28,10 +28,10 @@ export function useRecipeOperations() {
   const addPreparation = useCallback((preparationsData, setPreparationsData, newPreparation) => {
     const newPrep = {
       id: String(Date.now()),
-      title: newPreparation.title || `${preparationsData.length + 1}º Processo`,
       ingredients: newPreparation.ingredients || [],
       sub_components: newPreparation.sub_components || [],
       instructions: newPreparation.instructions || "",
+      aiHistory: newPreparation.aiHistory || [],
       processes: newPreparation.processes || ['cooking'],
       assembly_config: newPreparation.assembly_config,
       ...newPreparation
@@ -156,7 +156,8 @@ export function useRecipeOperations() {
       if (newPreparations[prepIndex]) {
         // CORRIGIDO: Spread primeiro, depois garantir campos numéricos
         const newIngredient = {
-          id: String(Date.now()),
+          id: String(Date.now()), // Unique ID for React Key
+          ingredient_id: ingredient.id, // Immutable Database Reference
           ...ingredient,
           name: ingredient.name,
           // Garantir que campos de peso sejam numéricos (0 se vazio)
@@ -345,7 +346,7 @@ export function useRecipeOperations() {
 
   const loadRecipe = useCallback(async (recipeId) => {
     try {
-      const response = await fetch(`/api/recipes?id=${recipeId}`);
+      const response = await fetch(`/api/recipes?id=${recipeId}`, { cache: 'no-store' });
       const result = await response.json();
 
       if (!result.success) {
@@ -363,6 +364,7 @@ export function useRecipeOperations() {
         ...prep,
         id: prep.id || String(Date.now() + Math.random()), // Garante ID único
         notes: prep.notes || [], // Preservar notas
+        aiHistory: prep.aiHistory || [], // Preservar histórico da IA
         ingredients: (prep.ingredients || []).map(ing => ({
           ...ing,
           weight_raw: ing.weight_raw || 0,

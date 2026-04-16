@@ -11,6 +11,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
+import { getDocRef, getCollectionRef } from '@/app/api/entities';
 
 /**
  * Remover valores undefined recursivamente de um objeto
@@ -83,7 +84,7 @@ export function useImpressaoProgramacao(weekNumber, year, dayNumber, initialData
 
   // Gerar ID do documento
   const docId = `${weekNumber}_${year}_${dayNumber}`;
-  const docRef = doc(db, 'impressaoProgramacao', docId);
+  const docRef = getDocRef('impressaoProgramacao', docId);
 
   /**
    * Inicializar presença do usuário
@@ -92,7 +93,7 @@ export function useImpressaoProgramacao(weekNumber, year, dayNumber, initialData
     if (!user) return;
 
     try {
-      const presenceDocRef = doc(db, 'impressaoProgramacao', docId, 'editingPresence', user.uid);
+      const presenceDocRef = doc(docRef.firestore, docRef.path, 'editingPresence', user.uid);
       presenceRef.current = presenceDocRef;
 
       // Marcar presença
@@ -142,7 +143,7 @@ export function useImpressaoProgramacao(weekNumber, year, dayNumber, initialData
   useEffect(() => {
     if (!user) return;
 
-    const presenceCollectionRef = collection(db, 'impressaoProgramacao', docId, 'editingPresence');
+    const presenceCollectionRef = collection(docRef.firestore, docRef.path, 'editingPresence');
 
     const unsubscribe = onSnapshot(presenceCollectionRef, (snapshot) => {
       const users = [];

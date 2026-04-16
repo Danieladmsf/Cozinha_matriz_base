@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getDocRef } from '@/app/api/entities';
 
 export async function GET(request) {
     try {
         const matrizId = '2Ub3ONFSJqb5hkso17uq';
-        const matrizRef = doc(db, 'Recipe', matrizId);
+        const matrizRef = getDocRef('Recipe', matrizId);
         const matrizSnap = await getDoc(matrizRef);
 
         if (!matrizSnap.exists()) {

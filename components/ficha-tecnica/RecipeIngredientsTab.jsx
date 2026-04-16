@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CookingPot, Plus, List, ChevronsUpDown, Save, Loader2 } from "lucide-react";
+import { CookingPot, Plus, List, ChevronsUpDown, Save, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import PopSelectorSidebar from '@/components/receitas/PopSelectorSidebar';
 import DraggablePreparationList from "./DraggablePreparationList";
@@ -42,7 +42,8 @@ export function RecipeIngredientsTab({
     removePreparation,
 
     // Ação de Salvar Central
-    handleSaveRecipe
+    handleSaveRecipe,
+    setIsImportTextModalOpen
 }) {
     return (
         <div className="mt-6 flex relative min-h-[600px]">
@@ -65,14 +66,25 @@ export function RecipeIngredientsTab({
                             <CookingPot className="h-5 w-5 text-orange-500" />
                             <h2 className="text-lg font-semibold">Processos</h2>
                         </div>
-                        <Button
-                            onClick={handleOpenProcessModal}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8"
-                        >
-                            <Plus className="mr-1 h-3 w-3" />
-                            Novo
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => setIsImportTextModalOpen(true)}
+                                variant="outline"
+                                size="sm"
+                                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 h-8 font-semibold"
+                            >
+                                <Sparkles className="mr-1 h-3 w-3" />
+                                Importar Texto
+                            </Button>
+                            <Button
+                                onClick={handleOpenProcessModal}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-8 font-semibold"
+                            >
+                                <Plus className="mr-1 h-3 w-3" />
+                                Novo
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-2 bg-gray-50/50">

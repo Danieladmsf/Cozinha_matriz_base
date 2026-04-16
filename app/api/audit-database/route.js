@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCollectionRef } from '@/app/api/entities';
 
 export async function GET() {
     try {
         // ========================================
         // 1. CARREGAR TODAS AS COLEÇÕES
         // ========================================
-        const recipesSnap = await getDocs(collection(db, 'Recipe'));
-        const ingredientsSnap = await getDocs(collection(db, 'Ingredient'));
+        const recipesSnap = await getDocs(getCollectionRef('Recipe'));
+        const ingredientsSnap = await getDocs(getCollectionRef('Ingredient'));
 
         const recipes = [];
         recipesSnap.forEach(doc => {

@@ -3,6 +3,7 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { RecipeEngine as RecipeCalculator } from '@/lib/recipe-engine/RecipeEngine';
 import { DemandCalculator, getCanonicalIngredientName } from '@/lib/production-engine/DemandCalculator';
+import { getDocRef } from '@/app/api/entities';
 const parseNumber = RecipeCalculator.parseValue;
 /**
  * TASK TYPES:
@@ -127,7 +128,7 @@ export function useTaskDistribution(orders = [], recipes = [], setRecipes, selec
             }
             setOptimisticTick(t => t + 1);
 
-            await updateDoc(doc(db, 'Recipe', recipeId), {
+            await updateDoc(getDocRef('Recipe', recipeId), {
                 preparations: updatedPreparations,
                 updatedAt: Timestamp.now(),
             });

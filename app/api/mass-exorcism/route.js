@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getCollectionRef, getDocRef, getTenantId } from '@/app/api/entities';
+import { getTenantIdFromRequest } from '@/lib/auth/tenantStore';
 
 export async function GET() {
     try {
-        const recipesRef = collection(db, 'Recipe');
+        const recipesRef = getCollectionRef('Recipe');
         const snapshot = await getDocs(recipesRef);
 
         let recipesFixed = 0;
@@ -57,7 +59,7 @@ export async function GET() {
             });
 
             if (recipeModified) {
-                const docRef = doc(db, 'Recipe', recipeDoc.id);
+                const docRef = getDocRef('Recipe', recipeDoc.id);
                 await updateDoc(docRef, { preparations: preps });
                 recipesFixed++;
             }
