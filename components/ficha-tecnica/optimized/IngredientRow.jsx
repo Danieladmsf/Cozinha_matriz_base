@@ -251,8 +251,6 @@ const IngredientRow = ({
       <TableCell className="font-medium px-4 py-2 font-mono">
         <div className="flex flex-col">
           <span>{formatCapitalize(ingredient.name)}</span>
-          {/* DEBUG ID LOG - Remover depois */}
-          <span className="hidden" data-debug-ing-id={ingredient.id || ingredient.ingredient_id}></span>
           
           {/* Seletor de Variações TACO */}
           {ingredient.taco_variations && ingredient.taco_variations.length > 0 && (

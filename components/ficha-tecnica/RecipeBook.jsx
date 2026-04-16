@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import RecipeEngine from '@/lib/recipe-engine/RecipeEngine';
+import NutritionalInfo from '@/components/receitas/NutritionalInfo';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -988,6 +989,11 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
                             </div>
                         </div>
                     </div>
+
+                    {/* INFORMAÇÃO NUTRICIONAL */}
+                    <div className="bg-white rounded-xl p-0 overflow-hidden border border-gray-200 shadow-sm print:shadow-none print:border-gray-300 print-keep-together">
+                        <NutritionalInfo recipe={recipeData} autoExpand={true} />
+                    </div>
                 </div>
 
                 {/* === COLUNA DIREITA (TÍTULO + INFO + PREPARO) === */}
@@ -1215,7 +1221,7 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
 
                                             {/* EXIBIÇÃO DE NOTAS DA ETAPA (Agora com Fotos!) */}
                                             {prep.notes && prep.notes.length > 0 && (
-                                                <div className="mt-0 space-y-1 print:space-y-0">
+                                                <div className="mt-4 space-y-5 print:space-y-3 print:mt-2">
                                                     {prep.notes
                                                         // Show if it has content OR photo
                                                         .filter(note => (note.content && note.content.trim().length > 0) || note.photo)
@@ -1264,7 +1270,7 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
                                                                             {/* Conteúdo Texto */}
                                                                             {note.content && (
                                                                                 <div
-                                                                                    className="text-gray-700 leading-snug text-sm md:text-base prose prose-sm max-w-none [&_p]:m-0 [&_p]:mb-1"
+                                                                                    className="text-gray-700 leading-snug text-sm md:text-base prose prose-sm max-w-none [&_p]:mb-2 [&_p]:min-h-[1rem] last:[&_p]:mb-0"
                                                                                     dangerouslySetInnerHTML={{ __html: note.content }}
                                                                                 />
                                                                             )}

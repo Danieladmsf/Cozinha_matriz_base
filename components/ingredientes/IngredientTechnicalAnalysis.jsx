@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { Ingredient, Employee } from "@/app/api/entities";
+import { Ingredient } from "@/app/api/entities";
 import { propagateIngredientUpdate } from "@/lib/services/recipePropagationService";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -22,11 +22,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Save, Clock, User, Package } from "lucide-react";
+import { Search, Save, Clock, TrendingDown, TrendingUp } from "lucide-react";
 
 export default function IngredientTechnicalAnalysis() {
     const [ingredients, setIngredients] = useState([]);
-    const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [saving, setSaving] = useState(false);
@@ -43,10 +42,7 @@ export default function IngredientTechnicalAnalysis() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [ingData, empData] = await Promise.all([
-                Ingredient.list(),
-                Employee.list()
-            ]);
+            const ingData = await Ingredient.list();
 
             // Filtrar apenas ativos e ordenar por nome
             const activeIngredients = ingData
@@ -66,7 +62,6 @@ export default function IngredientTechnicalAnalysis() {
                 });
 
             setIngredients(activeIngredients);
-            setEmployees(empData || []);
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -194,15 +189,22 @@ export default function IngredientTechnicalAnalysis() {
         if (!price) return 0;
         const lossThaw = safeParseFloat(thawingLossPct);
         const lossClean = safeParseFloat(cleaningLossPct);
-
-        // Rendimento sequencial: (1 - perda_descongelamento) * (1 - perda_limpeza)
         const yieldThaw = (100 - lossThaw) / 100;
         const yieldClean = (100 - lossClean) / 100;
-
         const totalYield = yieldThaw * yieldClean;
-
         if (totalYield <= 0) return 0;
         return (price / totalYield);
+    };
+
+    // Custo após cocção (sobre o custo limpo)
+    const calculateCookedCost = (cleanCost, cookingLossPct) => {
+        if (!cleanCost) return 0;
+        const cook = safeParseFloat(cookingLossPct);
+        // Valores negativos = ganho de peso (arroz, feijão absorvem água) → custo cai
+        if (cook === 0) return null; // sem cocção definida, não exibir
+        const yieldCook = (100 - cook) / 100;
+        if (yieldCook <= 0) return null; // 100% de cocção = água
+        return (cleanCost / yieldCook);
     };
 
     const calculateLaborCost = (timeMin, roleId) => {
@@ -228,23 +230,19 @@ export default function IngredientTechnicalAnalysis() {
                 <TableRow className="bg-gray-50">
                     <TableHead className="w-[200px]">Insumo</TableHead>
                     <TableHead>Preço Bruto</TableHead>
-                    <TableHead className="text-center bg-blue-50/50">Descongelamento (%)</TableHead>
-                    <TableHead className="text-center bg-green-50/50">Limpeza (%)</TableHead>
-                    <TableHead className="text-center bg-red-50/50">Cocção (%)</TableHead>
+                    <TableHead className="text-center bg-blue-50/50">Descongelamento</TableHead>
+                    <TableHead className="text-center bg-green-50/50">Limpeza</TableHead>
+                    <TableHead className="text-center bg-red-50/50">Cocção</TableHead>
                     <TableHead className="text-center bg-amber-50/50">
                         <div className="flex items-center justify-center gap-1">
                             <Clock className="h-3 w-3" />
-                            Mão de Obra (min/kg)
+                            Mão de Obra
                         </div>
                     </TableHead>
-                    <TableHead className="text-center bg-amber-50/50">
-                        <div className="flex items-center justify-center gap-1">
-                            <User className="h-3 w-3" />
-                            Responsável
-                        </div>
-                    </TableHead>
-                    <TableHead className="text-right">Custo Real (Limpo)</TableHead>
-                    <TableHead className="w-[100px]"></TableHead>
+
+                    <TableHead className="text-right">Custo Limpo/kg</TableHead>
+                    <TableHead className="text-right bg-orange-50/50">Custo Pronto/kg</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -252,7 +250,9 @@ export default function IngredientTechnicalAnalysis() {
                     const techData = ing.technical_data || {};
                     const cleanLoss = safeParseFloat(techData.cleaning_loss_pct);
                     const thawLoss = safeParseFloat(techData.thawing_loss_pct);
+                    const cookLoss = safeParseFloat(techData.cooking_loss_pct);
                     const netCost = calculateNetCost(ing.current_price, techData.thawing_loss_pct, techData.cleaning_loss_pct);
+                    const cookedCost = calculateCookedCost(netCost, techData.cooking_loss_pct);
 
                     // Usar o valor em minutos (string ou number) para cálculo
                     const timePerKgMin = techData.cleaning_time_min;
@@ -270,119 +270,121 @@ export default function IngredientTechnicalAnalysis() {
 
                             {/* Descongelamento */}
                             <TableCell className="bg-blue-50/30">
-                                <div className="flex items-center gap-1 text-center justify-center">
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className="h-8 w-16 text-center text-xs"
-                                        value={techData.thawing_loss_pct || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9,]/g, '');
-                                            handleUpdate(ing.id, 'thawing_loss_pct', val);
-                                        }}
-                                        placeholder="0-100"
-                                        title="Digite 20 para 20%, 0,2 para 0,2% (Use vírgula)"
-                                    />
+                                <div className="flex items-center gap-1 justify-center">
+                                    <div className="relative">
+                                        <Input
+                                            type="text"
+                                            inputMode="decimal"
+                                            className="h-8 w-16 text-center text-xs pr-5"
+                                            value={techData.thawing_loss_pct || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9,]/g, '');
+                                                handleUpdate(ing.id, 'thawing_loss_pct', val);
+                                            }}
+                                            placeholder="0"
+                                        />
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-blue-400 pointer-events-none font-medium">%</span>
+                                    </div>
                                 </div>
                             </TableCell>
 
                             {/* Limpeza */}
                             <TableCell className="bg-green-50/30">
-                                <div className="flex items-center gap-1 text-center justify-center">
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className="h-8 w-16 text-center border-green-200 focus:border-green-500 text-xs"
-                                        value={techData.cleaning_loss_pct || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9,]/g, '');
-                                            handleUpdate(ing.id, 'cleaning_loss_pct', val);
-                                        }}
-                                        placeholder="0"
-                                    />
+                                <div className="flex items-center gap-1 justify-center">
+                                    <div className="relative">
+                                        <Input
+                                            type="text"
+                                            inputMode="decimal"
+                                            className="h-8 w-16 text-center border-green-200 focus:border-green-500 text-xs pr-5"
+                                            value={techData.cleaning_loss_pct || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9,]/g, '');
+                                                handleUpdate(ing.id, 'cleaning_loss_pct', val);
+                                            }}
+                                            placeholder="0"
+                                        />
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-green-500 pointer-events-none font-medium">%</span>
+                                    </div>
                                 </div>
                             </TableCell>
 
                             {/* Cocção */}
                             <TableCell className="bg-red-50/30">
-                                <div className="flex items-center gap-1 text-center justify-center">
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className="h-8 w-16 text-center border-red-200 focus:border-red-500 text-xs"
-                                        value={techData.cooking_loss_pct || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9,]/g, '');
-                                            handleUpdate(ing.id, 'cooking_loss_pct', val);
-                                        }}
-                                        placeholder="0"
-                                    />
+                                <div className="flex items-center gap-1 justify-center">
+                                    <div className="relative">
+                                        <Input
+                                            type="text"
+                                            inputMode="decimal"
+                                            className="h-8 w-16 text-center border-red-200 focus:border-red-500 text-xs pr-5"
+                                            value={techData.cooking_loss_pct || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9,]/g, '');
+                                                handleUpdate(ing.id, 'cooking_loss_pct', val);
+                                            }}
+                                            placeholder="0"
+                                        />
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-red-400 pointer-events-none font-medium">%</span>
+                                    </div>
                                 </div>
                             </TableCell>
 
                             {/* Mão de Obra (Tempo) */}
                             <TableCell className="bg-amber-50/30">
                                 <div className="flex items-center justify-center gap-1">
-                                    <Input
-                                        type="text"
-                                        inputMode="decimal"
-                                        className="h-8 w-20 text-center border-amber-200 focus:border-amber-500 text-xs"
-                                        value={techData.cleaning_time_min || ''}
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9,]/g, '');
-                                            handleUpdate(ing.id, 'cleaning_time_min', val);
-                                        }}
-                                        placeholder="Min"
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            type="text"
+                                            inputMode="decimal"
+                                            className="h-8 w-20 text-center border-amber-200 focus:border-amber-500 text-xs pr-7"
+                                            value={techData.cleaning_time_min || ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9,]/g, '');
+                                                handleUpdate(ing.id, 'cleaning_time_min', val);
+                                            }}
+                                            placeholder="0"
+                                        />
+                                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-amber-500 pointer-events-none font-medium">min</span>
+                                    </div>
                                 </div>
                             </TableCell>
 
-                            {/* Responsável (Cargo) */}
-                            <TableCell className="bg-amber-50/30">
-                                <Select
-                                    value={techData.labor_role_id || "none"}
-                                    onValueChange={(val) => handleUpdate(ing.id, 'labor_role_id', val === "none" ? null : val)}
-                                >
-                                    <SelectTrigger className="h-8 w-[140px] text-xs border-amber-200 bg-white">
-                                        <SelectValue placeholder="Selecione..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">Nenhum</SelectItem>
-                                        {employees.map(emp => {
-                                            const hourlyRate = (emp.salary || 0) / 220;
-                                            return (
-                                                <SelectItem key={emp.id} value={emp.id}>
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="font-medium">{emp.name}</span>
-                                                        <span className="text-[10px] text-gray-500">
-                                                            {emp.role || 'Sem cargo'} • {formatCurrency(hourlyRate)}/h
-                                                        </span>
-                                                    </div>
-                                                </SelectItem>
-                                            );
-                                        })}
-                                    </SelectContent>
-                                </Select>
-                                {laborCost > 0 && (
-                                    <div className="text-[10px] text-gray-500 text-center mt-1">
-                                        +{formatCurrency(laborCost)}/kg
-                                    </div>
-                                )}
-                            </TableCell>
 
                             <TableCell className="text-right">
                                 <div className="font-bold text-gray-700 text-sm">
                                     {formatCurrency(netCost)}
                                 </div>
                                 {thawLoss > 0 && (
-                                    <div className="text-[10px] text-blue-500">
-                                        -{thawLoss}% gelo
-                                    </div>
+                                    <div className="text-[10px] text-blue-500">-{thawLoss}% gelo</div>
                                 )}
                                 {cleanLoss > 0 && (
-                                    <div className="text-[10px] text-red-500">
-                                        -{cleanLoss}% limpeza
-                                    </div>
+                                    <div className="text-[10px] text-red-500">-{cleanLoss}% limpeza</div>
+                                )}
+                            </TableCell>
+
+                            {/* Custo Pronto (pós-cocção) */}
+                            <TableCell className="text-right bg-orange-50/30">
+                                {cookedCost !== null ? (
+                                    <>
+                                        <div className={`font-bold text-sm ${
+                                            cookLoss < 0 ? 'text-green-600' : 'text-orange-700'
+                                        }`}>
+                                            {formatCurrency(cookedCost)}
+                                        </div>
+                                        <div className={`flex items-center justify-end gap-0.5 text-[10px] ${
+                                            cookLoss < 0 ? 'text-green-500' : 'text-orange-400'
+                                        }`}>
+                                            {cookLoss < 0
+                                                ? <TrendingUp className="h-3 w-3" />
+                                                : <TrendingDown className="h-3 w-3" />
+                                            }
+                                            {cookLoss < 0
+                                                ? `+${Math.abs(cookLoss)}% absorção`
+                                                : `-${cookLoss}% cocção`
+                                            }
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="text-[11px] text-gray-300">—</span>
                                 )}
                             </TableCell>
 

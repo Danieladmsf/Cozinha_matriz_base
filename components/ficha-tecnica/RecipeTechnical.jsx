@@ -747,7 +747,6 @@ export default function RecipeTechnical() {
       processes: selectedProcesses,
       ingredients: [],
       sub_components: [],
-      instructions: "",
       assembly_config: selectedProcesses.includes('assembly') ? {
         container_type: 'unidade',
         total_weight: '',
@@ -935,7 +934,7 @@ export default function RecipeTechnical() {
       <div className="max-w-[1600px] ml-0 space-y-6">
 
         {/* Header e Voltar */}
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-4 mb-4 print:hidden">
           <Button
             variant="outline"
             size="sm"
@@ -962,7 +961,7 @@ export default function RecipeTechnical() {
 
         {/* Sistema de Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6 print:hidden">
             <TabsTrigger value="dados-tecnicos">Dados Técnicos</TabsTrigger>
             <TabsTrigger value="nutricao">Nutrição</TabsTrigger>
             <TabsTrigger value="book">Receituário</TabsTrigger>

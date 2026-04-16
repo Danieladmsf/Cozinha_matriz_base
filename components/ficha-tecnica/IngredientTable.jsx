@@ -6,7 +6,6 @@ import { Plus, ClipboardList, CookingPot, Package } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AssemblySubComponents from './AssemblySubComponents';
 import IngredientRow from './optimized/IngredientRow';
-import RecipeRow from './optimized/RecipeRow';
 import { processTypes } from '@/lib/recipeConstants';
 import { parseNumericValue } from '@/lib/formatUtils';
 import { RecipeEngine as RecipeCalculator } from "@/lib/recipe-engine/RecipeEngine";
@@ -579,22 +578,6 @@ const IngredientTable = ({
                     prep={prep}
                     readOnly={isReadOnly || item.data.locked}
                     onOpenIngredientModal={onOpenIngredientModal}
-                    {...rest}
-                  />
-                ))}
-
-                {/* Renderizar Receitas (apenas na última seção ou se for seção única?)
-                    Vamos renderizar receitas sempre na última seção para simplificar.
-                    Ou se não tiver seções de ingredientes, renderiza na única.
-                */}
-                {idx === sections.length - 1 && recipes.map((recipe, recipeIndex) => (
-                  <RecipeRow
-                    key={`recipe-${recipe.id || recipeIndex}`}
-                    recipe={recipe}
-                    prepIndex={prepIndex}
-                    recipeIndex={recipeIndex}
-                    prep={prep}
-                    readOnly={isReadOnly} /* PASS READONLY */
                     {...rest}
                   />
                 ))}

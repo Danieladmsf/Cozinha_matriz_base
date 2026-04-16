@@ -11,7 +11,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Save, ChefHat } from "lucide-react";
+import { Save, ChefHat, ChevronsUpDown, Check } from "lucide-react";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe, fullCategoryTree = [], activeType = 'receitas', existingCodes = [] }) {
     const [formData, setFormData] = useState({
@@ -19,6 +33,7 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe
         code: '',
         category: '',
     });
+    const [categorySelectorOpen, setCategorySelectorOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -34,7 +49,7 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe
         }
     }, [isOpen, editingRecipe]);
 
-    // Filtrar categorias do tipo ativo (receitas)
+    // Normalizar tipos para filtrar categorias corretas
     const normalizeType = (t) => {
         const raw = (t || '').toLowerCase().trim();
         const aliases = {
@@ -45,12 +60,54 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe
         return aliases[raw] || raw || 'receitas';
     };
 
-    const availableCategories = fullCategoryTree
-        .filter(c => normalizeType(c.type) === normalizeType(activeType) && c.level === 1 && c.active !== false)
+    // Montar a árvore de categorias hierárquica
+    const typeCats = fullCategoryTree.filter(cat => normalizeType(cat.type) === normalizeType(activeType) && cat.active !== false);
+
+    const roots = typeCats
+        .filter(c => c.level === 1)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-    // Debug for when fullCategoryTree has elements but they don't match
-    // console.log('[RecipeFormModal] Tree:', fullCategoryTree.map(c=>c.name), 'Available:', availableCategories.map(c=>c.name));
+
+    const groupedCategories = roots.map(root => {
+        const buildDescendants = (cats, parentId, prefix) => {
+            let list = [];
+            const children = cats
+                .filter(c => c.parent_id === parentId)
+                .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+            for (const child of children) {
+                const label = `${prefix} > ${child.name}`;
+                list.push({
+                    value: child.id,
+                    label: label,
+                    originalName: child.name,
+                    id: child.id
+                });
+                list = [...list, ...buildDescendants(cats, child.id, label)];
+            }
+            return list;
+        };
+
+        const descendants = buildDescendants(typeCats, root.id, root.name);
+
+        const rootItem = {
+            value: root.id,
+            label: root.name,
+            originalName: root.name,
+            id: root.id,
+            isRoot: true
+        };
+
+        return {
+            groupName: root.name,
+            items: [rootItem, ...descendants]
+        };
+    });
+
+    const getSelectedLabel = () => {
+        if (!formData.category) return "Sem Categoria";
+        const found = groupedCategories.flatMap(g => g.items).find(c => c.originalName === formData.category);
+        return found ? found.label : formData.category;
+    };
 
     // Função para gerar código único de receita garantindo sequencial global
     const generateRecipeCode = (recipeName, allCodes = []) => {
@@ -126,16 +183,66 @@ export default function RecipeFormModal({ isOpen, onClose, onSave, editingRecipe
                         </div>
                         <div className="space-y-2">
                             <Label>Categoria</Label>
-                            <select
-                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                value={formData.category}
-                                onChange={e => setFormData({ ...formData, category: e.target.value })}
-                            >
-                                <option value="">Sem Categoria</option>
-                                {availableCategories.map(cat => (
-                                    <option key={cat.id} value={cat.name}>{cat.name}</option>
-                                ))}
-                            </select>
+                            <Popover open={categorySelectorOpen} onOpenChange={setCategorySelectorOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={categorySelectorOpen}
+                                        className="w-full justify-between font-normal border-gray-300"
+                                    >
+                                        <span className="truncate">{getSelectedLabel()}</span>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar categoria..." />
+                                        <CommandList>
+                                            <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="Sem Categoria"
+                                                    onSelect={() => {
+                                                        setFormData({ ...formData, category: '' });
+                                                        setCategorySelectorOpen(false);
+                                                    }}
+                                                >
+                                                    <Check
+                                                        className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            !formData.category ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    Sem Categoria
+                                                </CommandItem>
+                                            </CommandGroup>
+                                            {groupedCategories.map((group) => (
+                                                <CommandGroup key={group.groupName} heading={group.groupName}>
+                                                    {group.items.map((category) => (
+                                                        <CommandItem
+                                                            key={category.value}
+                                                            value={category.label}
+                                                            onSelect={() => {
+                                                                setFormData({ ...formData, category: category.originalName });
+                                                                setCategorySelectorOpen(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    formData.category === category.originalName ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {category.label}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            ))}
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
 

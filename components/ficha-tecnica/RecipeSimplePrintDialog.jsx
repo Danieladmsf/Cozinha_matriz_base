@@ -117,10 +117,19 @@ const calculateAdjustedRecipeData = (recipe, preparations, adjustmentFactor) => 
   };
 
   preparations.forEach(prep => {
+    const getInstructionsStr = (p) => {
+      if (!p.notes || p.notes.length === 0) return "Não especificado";
+      return p.notes.map((n, i) => {
+        const title = n.title ? `<strong>${i + 1}º Passo - ${n.title}</strong><br>` : '';
+        const content = typeof n === 'object' ? (n.content || n.text || n.name || '') : String(n);
+        return `<div style="margin-bottom: 6px;">${title}${content}</div>`;
+      }).join('');
+    };
+
     const adjustedProcess = {
       id: prep.id,
       title: prep.title,
-      instructions: prep.instructions || "Não especificado",
+      instructions: getInstructionsStr(prep),
       ingredients: [],
       subComponents: []
     };

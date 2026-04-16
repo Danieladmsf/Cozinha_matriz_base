@@ -43,6 +43,7 @@ import BrandsManager from "@/components/ingredientes/BrandsManager";
 import ImportManager from "@/components/ingredientes/ImportManager";
 import AnalysisManager from "@/components/ingredientes/AnalysisManager";
 import IngredientsTable from "@/components/ingredientes/IngredientsTable";
+import IngredientTechnicalAnalysis from "@/components/ingredientes/IngredientTechnicalAnalysis";
 
 // 🎯 USAR HOOKS CUSTOMIZADOS
 import { useIngredients } from "@/hooks/ingredientes/useIngredients";
@@ -188,13 +189,20 @@ export default function Ingredients() {
 
       {/* Tabs principais */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 bg-white p-2 rounded-xl shadow-md border border-gray-100 gap-2">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-white p-2 rounded-xl shadow-md border border-gray-100 gap-2">
           <TabsTrigger
             value="ingredients"
             className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg font-medium"
           >
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline">Insumos</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="technical"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-teal-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg font-medium"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Dados Técnicos</span>
           </TabsTrigger>
           <TabsTrigger
             value="brands"
@@ -316,6 +324,10 @@ export default function Ingredients() {
           </Tabs>
         </TabsContent>
 
+
+        <TabsContent value="technical" className="space-y-6 pt-2">
+          <IngredientTechnicalAnalysis />
+        </TabsContent>
 
         <TabsContent value="brands" className="space-y-6">
           <BrandsManager />

@@ -77,7 +77,6 @@ const ProcessCreatorModalComponent = ({
       title: `${nextStepNumber}º Etapa: ${processLabels}`,
       processes: selectedProcesses,
       ingredients: [],
-      instructions: "",
       assembly_config: selectedProcesses.includes('assembly') ? {
         container_type: 'unidade',
         total_weight: '',
@@ -347,7 +346,6 @@ const ProcessCreatorModalComponent = ({
             }º Etapa: ${recipeData.name}`,
           processes: finalProcesses,
           ingredients: consolidatedIngredients,
-          instructions: `Importado de: ${recipeData.name}. Etapas consolidadas: ${stepTitles.join(', ')}.`,
           notes: [], // Notes are now interleaved as ingredients
           assembly_config: undefined,
           origin_id: recipeData.id // MARCAR COMO MATRIZ para bloquear edição
@@ -400,7 +398,6 @@ const ProcessCreatorModalComponent = ({
       processes: ['portioning'],
       ingredients: [],
       sub_components: initialSubComponents, // JA INICIA COM OS ITENS
-      instructions: "",
       assembly_config: {
         container_type: 'unidade',
         total_weight: '',
@@ -429,7 +426,6 @@ const ProcessCreatorModalComponent = ({
         }º Etapa: Embalagem`,
       processes: ['packaging'],
       ingredients: [],
-      instructions: "",
       assembly_config: undefined
     };
 
@@ -440,12 +436,6 @@ const ProcessCreatorModalComponent = ({
   const handleCreateSimpleProcess = useCallback((processId) => {
     const processLabel = processTypes[processId]?.label || processId;
     const prepCount = preparationsLength;
-
-    // Configurações específicas por tipo
-    let defaultInstruction = "";
-    if (processId === 'defrosting') defaultInstruction = "Processo de descongelamento controlado.";
-    if (processId === 'cleaning') defaultInstruction = "Higienização e corte.";
-    if (processId === 'cooking') defaultInstruction = "Processo de cocção.";
 
     const newPreparation = {
       title: `${(() => {
@@ -460,7 +450,6 @@ const ProcessCreatorModalComponent = ({
         }º Etapa: ${processLabel}`,
       processes: [processId],
       ingredients: [],
-      instructions: defaultInstruction,
       assembly_config: undefined
     };
 

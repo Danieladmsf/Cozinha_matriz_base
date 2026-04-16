@@ -561,7 +561,7 @@ export default function RecipeTechnicalPrintDialog({
       printContent += `
         <div class="instructions">
           <div class="instructions-title">Modo de Preparo desta Etapa:</div>
-          <div class="instructions-content">${formatInstructions(prep.instructions)}</div>
+          <div class="instructions-content">${formatInstructions(prep.notes)}</div>
         </div>
       </div>
       `;

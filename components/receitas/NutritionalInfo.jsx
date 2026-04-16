@@ -457,7 +457,7 @@ export default function NutritionalInfo({ recipe, autoExpand = false }) {
     <div className="mt-2">
       <div className="flex justify-between items-center">
         <h4 className="font-medium">Informação Nutricional</h4>
-        <div className="flex gap-1">
+        <div className="flex gap-1 print:hidden">
           {/* Controles de porção e nutrientes */}
           <Popover>
             <PopoverTrigger asChild>
