@@ -84,7 +84,7 @@ export default function LoginScreen() {
                         <div className="text-center">
                             <h2 className="text-xl font-semibold text-white drop-shadow-sm">Bem-vindo!</h2>
                             <p className="text-sm text-blue-100/90 mt-1 drop-shadow-sm">
-                                Cadastre-se grátis ou faça login para acessar seu painel
+                                Acesse sua conta ou inicie seu teste de 7 dias
                             </p>
                         </div>
 
@@ -116,23 +116,11 @@ export default function LoginScreen() {
                             </div>
                         )}
 
-                        {/* Info trial e Assinatura */}
-                        <div className="pt-2 text-center space-y-5">
+                        {/* Info trial */}
+                        <div className="pt-2 text-center">
                             <p className="text-sm font-semibold text-slate-200/90 tracking-wide">
                                 7 dias grátis para testar todas as funcionalidades
                             </p>
-                            
-                            <div className="pt-5 border-t border-white/20">
-                                <p className="text-[13px] text-white/90 font-medium mb-3">Já fez o teste gratuíto e deseja assinar?</p>
-                                <a 
-                                    href="https://mpago.la/2Re9Nec" 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="inline-flex w-full items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                                >
-                                    Fazer Pagamento via Mercado Pago
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>

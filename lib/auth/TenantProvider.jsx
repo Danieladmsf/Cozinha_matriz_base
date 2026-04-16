@@ -8,7 +8,7 @@ import {
     GoogleAuthProvider,
     signOut as firebaseSignOut
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection } from 'firebase/firestore';
 import { setTenantId, clearTenantId } from '@/lib/auth/tenantStore';
 
 // ============================================

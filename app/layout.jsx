@@ -28,6 +28,7 @@ import { addDialogDescriptions, addSROnlyStyles } from "@/lib/dialogDescriptionF
 import TenantProvider, { useTenant } from "@/lib/auth/TenantProvider";
 import LoginScreen from "@/components/auth/LoginScreen";
 
+import WelcomeModal from "@/components/shared/WelcomeModal";
 import Paywall from "@/components/auth/Paywall";
 
 function _getCurrentPage(pathname) {
@@ -44,11 +45,15 @@ const PUBLIC_ROUTES = ['/portal', '/landing', '/login'];
 // INNER: Conteúdo autenticado
 // ============================================
 function AuthenticatedApp({ children }) {
-  const { user, loading, initializing, isTrialExpired } = useTenant();
+  const { user, tenantData, loading, initializing, isTrialExpired } = useTenant();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [, setActiveItem] = useState(null);
+  
+  // Welcome Modal state
+  const [showWelcome, setShowWelcome] = useState(false);
+
   const pathname = usePathname();
   const currentPageName = _getCurrentPage(pathname);
 
@@ -83,6 +88,26 @@ function AuthenticatedApp({ children }) {
       addDialogDescriptions();
     }
   }, [pathname, currentPageName]);
+
+  // Boas-vindas para usuários recém-criados
+  useEffect(() => {
+    if (tenantData?.createdAt && !isTrialExpired) {
+        const createdDate = new Date(tenantData.createdAt?.seconds ? tenantData.createdAt.seconds * 1000 : tenantData.createdAt);
+        const diffMinutes = (new Date() - createdDate) / (1000 * 60);
+        
+        // Menos de 10 minutos de vida e não tem a flag "visto" no cache local
+        if (diffMinutes < 10 && !localStorage.getItem(`welcome_seen_${tenantData.tenantId}`)) {
+            setShowWelcome(true);
+        }
+    }
+  }, [tenantData, isTrialExpired]);
+
+  const handleCloseWelcome = () => {
+      if (tenantData?.tenantId) {
+          localStorage.setItem(`welcome_seen_${tenantData.tenantId}`, 'true');
+      }
+      setShowWelcome(false);
+  };
 
   const handleMouseEnter = () => {
     if (sidebarCollapsed) setIsHovering(true);
@@ -132,9 +157,11 @@ function AuthenticatedApp({ children }) {
     return <Paywall />;
   }
 
-  // ✅ Autenticado e Válido → App normal com sidebar
+  // Vai renderizar o App normal
   return (
     <div className="flex h-full bg-gray-100 main-app-container print:h-auto print:overflow-visible">
+      
+      <WelcomeModal isOpen={showWelcome} onClose={handleCloseWelcome} />
 
       {sidebarOpen && (
         <div

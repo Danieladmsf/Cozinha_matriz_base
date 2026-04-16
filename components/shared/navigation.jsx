@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Sparkles,
   User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export default function SidebarNav({
   handleMouseEnter,
   handleMouseLeave
 }) {
-  const { user, signOut } = useTenant();
+  const { user, tenantData, signOut } = useTenant();
 
   return (
     <aside
@@ -59,21 +60,27 @@ export default function SidebarNav({
               "hidden lg:flex transition-all z-10",
               (!sidebarCollapsed || isHovering) ? "" : "absolute left-1/2 -translate-x-1/2"
             )}
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onClick={() => {
+              setSidebarCollapsed(!sidebarCollapsed);
+              setIsHovering(false);
+            }}
           >
             {sidebarCollapsed && !isHovering ? (
-              <ChevronRight className="h-5 w-5 text-gray-500" />
+              <ChevronRight className="h-4 w-4 text-gray-500" />
             ) : (
-              <ChevronLeft className="h-5 w-5 text-gray-500" />
+              <ChevronLeft className="h-4 w-4 text-gray-500" />
             )}
           </Button>
         </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
-          <div className="space-y-1 px-3">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 scrollbar-hide">
+          <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = currentPageName === item.href;
-              const isRecipes = item.href === "Recipes";
+              const isActive = item.href === "/dashboard" 
+                ? currentPageName === "Dashboard"
+                : currentPageName.startsWith(item.href.substring(1));
+              
+              const isRecipes = item.href === "/receitas";
 
               return (
                 <Link
@@ -97,7 +104,7 @@ export default function SidebarNav({
                   <item.icon
                     className={cn(
                       "h-4 w-4 sidebar-icon",
-                      isActive ? "text-blue-600" : "text-gray-400"
+                      isActive ? "text-orange-500" : "text-blue-800"
                     )}
                   />
 
@@ -122,6 +129,30 @@ export default function SidebarNav({
         <div className="p-3 border-t bg-gray-50/50">
           {(!sidebarCollapsed || isHovering) ? (
             <div className="flex flex-col gap-3">
+              {tenantData?.plan === 'trial' && tenantData?.trialEndsAt && (
+                <div className="bg-amber-100 border border-amber-200 rounded-md px-2.5 py-1.5 flex items-center justify-between gap-2 shadow-sm">
+                   <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span className="text-[11px] font-semibold text-amber-800">Trial</span>
+                   </div>
+                   <span className="text-[10px] font-bold text-amber-900 bg-amber-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                      {Math.max(0, Math.ceil((new Date(tenantData.trialEndsAt?.seconds ? tenantData.trialEndsAt.seconds * 1000 : tenantData.trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24)))}d
+                   </span>
+                </div>
+              )}
+
+              {tenantData?.plan === 'paid' && tenantData?.subscriptionEndsAt && (
+                <div className="bg-blue-100 border border-blue-200 rounded-md p-2 flex items-center justify-between shadow-sm">
+                   <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-semibold text-blue-800">Plano F360</span>
+                   </div>
+                   <span className="text-[10px] font-bold text-blue-900 bg-blue-200 px-2 py-0.5 rounded-full">
+                      {Math.max(0, Math.ceil((new Date(tenantData.subscriptionEndsAt?.seconds ? tenantData.subscriptionEndsAt.seconds * 1000 : tenantData.subscriptionEndsAt) - new Date()) / (1000 * 60 * 60 * 24)))} dias
+                   </span>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="User" className="h-9 w-9 rounded-full ring-2 ring-white shadow-sm" />
