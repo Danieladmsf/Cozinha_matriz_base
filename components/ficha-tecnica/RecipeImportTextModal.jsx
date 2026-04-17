@@ -119,6 +119,19 @@ export function RecipeImportTextModal({
         setMatchedItems(results);
     };
 
+    const handleClearChat = () => {
+        if (confirm("Tem certeza que deseja limpar esta conversa e os resultados detectados?")) {
+            setMessages([{
+                role: 'assistant',
+                content: "Olá! Sou seu Chef Digital. Diga-me quais ingredientes precisamos para esta etapa ou cole sua receita aqui, e eu vou separar tudo pra você!"
+            }]);
+            setParsedResult(null);
+            setMatchedItems([]);
+            setInputText('');
+            toast({ title: "Chat Limpo", description: "O histórico e os resultados foram removidos." });
+        }
+    };
+
     const handleConfirmImport = () => {
         if (matchedItems.length === 0) {
             toast({ title: "Lista Vazia", description: "Adicione ingredientes conversando com o Chef primeiro.", variant: "warning" });
@@ -162,11 +175,20 @@ export function RecipeImportTextModal({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl lg:max-w-5xl w-[95vw] h-[75vh] max-h-[700px] flex flex-col p-0 overflow-hidden bg-gray-50 border-gray-200">
-                <DialogHeader className="p-4 border-b bg-white shrink-0">
+                <DialogHeader className="p-4 border-b bg-white shrink-0 flex flex-row items-center justify-between">
                     <DialogTitle className="flex items-center gap-2 text-indigo-600 text-lg">
                         <Sparkles className="h-5 w-5" />
                         Assistente de Pré-Preparo Dinâmico
                     </DialogTitle>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={handleClearChat}
+                        className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+                        title="Limpar Conversa"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 min-h-0">

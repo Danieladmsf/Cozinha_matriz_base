@@ -187,7 +187,7 @@ const OrdersTab = ({
 
         // Obter configuração das colunas baseada na categoria
         const columnConfig = CategoryLogic.getCategoryColumnConfig(categoryName);
-        const tableHeaders = CategoryLogic.getTableHeaders(columnConfig.isCarneCategory);
+        const tableHeaders = CategoryLogic.getTableHeaders();
 
         return (
           <div key={categoryName} className="bg-white rounded-xl shadow-sm border border-gray-200/50 overflow-hidden hover:shadow-md transition-all duration-300">
@@ -233,11 +233,11 @@ const OrdersTab = ({
                             <div>
                               <p className="font-medium text-blue-900 text-xs flex items-center gap-2">
                                 <span>
-                                  {item.vr_product_code && (
+                                  {item.vr_product_code ? (
                                     <span className="text-orange-500 font-bold mr-1">
                                       #{String(item.vr_product_code).padStart(6, '0')}
                                     </span>
-                                  )}
+                                  ) : null}
                                   {item.recipe_name}
                                 </span>
                                 {item.shelf_life && (
@@ -344,36 +344,7 @@ const OrdersTab = ({
                               disabled={!isEditMode}
                             />
                           </td>
-                          {columnConfig.showPorcionamento && (
-                            <>
-                              {/* Coluna de Input de Porcionamento */}
-                              <td className="p-2 text-center">
-                                <div className="flex items-center justify-center">
-                                  <DecimalInput
-                                    ref={(ref) => registerInput(percentInputId, ref)}
-                                    value={item.adjustment_percentage === 0 ? '' : item.adjustment_percentage || ''}
-                                    onChange={(e) => {
-                                      if (isEditMode) {
-                                        updateOrderItem(item.unique_id, 'adjustment_percentage', e.target.value);
-                                      }
-                                    }}
-                                    onKeyDown={(e) => handleKeyDown(e, percentInputId)}
-                                    className="text-center text-xs h-8 max-w-[60px] border-blue-300 focus:border-blue-500"
-                                    placeholder="0"
-                                    disabled={!isEditMode}
-                                  />
-                                  <span className="text-xs text-gray-500 ml-1">%</span>
-                                </div>
-                              </td>
-                            </>
-                          )}
-                          {columnConfig.showTotalPedido && (
-                            <td className="p-2">
-                              <div className="text-center text-xs font-medium text-blue-700">
-                                {utilFormattedQuantity(item.quantity)} {item.unit_type}
-                              </div>
-                            </td>
-                          )}
+
                           <td className="p-2">
                             <div className="text-center text-xs font-medium text-blue-700">
                               {utilFormatCurrency(item.total_price)}

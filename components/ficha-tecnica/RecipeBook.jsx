@@ -437,6 +437,16 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
         }
     };
 
+    React.useEffect(() => {
+        if (recipeData?.name) {
+            const originalTitle = document.title;
+            document.title = `Ficha Técnica - ${recipeData.name}`;
+            return () => {
+                document.title = originalTitle;
+            };
+        }
+    }, [recipeData?.name]);
+
     const filteredTools = toolSearchTerm.trim().length === 0
         ? []
         : availableTools.filter(t =>
@@ -471,7 +481,15 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
     };
 
     const handlePrint = () => {
-        window.print();
+        const originalTitle = document.title;
+        document.title = `Ficha Técnica - ${recipeData?.name || 'Sem Nome'}`;
+        
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+                document.title = originalTitle;
+            }, 1000); // 1 segundo é suficiente para garantir que a janela de diálogo leu o título
+        }, 50);
     };
 
 
@@ -610,7 +628,7 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
                 {`
                 @page {
                     size: portrait;
-                    margin: 35mm 15mm 20mm 15mm;
+                    margin: 10mm 10mm 10mm 10mm;
                 }
 
                 @media print {

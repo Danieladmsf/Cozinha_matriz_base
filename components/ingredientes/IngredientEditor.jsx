@@ -471,6 +471,19 @@ export default function IngredientEditor() {
     }));
   };
 
+  // Função para atualizar o nome da variação (Cru, Cozido, etc)
+  const updateTacoVariationName = (index, newName) => {
+    const updatedVariations = [...formData.taco_variations];
+    updatedVariations[index] = {
+      ...updatedVariations[index],
+      variation_name: newName
+    };
+    setFormData(prev => ({
+      ...prev,
+      taco_variations: updatedVariations
+    }));
+  };
+
   // ✅ Alternar seleção de um item TACO
   const toggleTacoSelection = (id) => {
     setSelectedTacoIds(prev =>
@@ -494,10 +507,10 @@ export default function IngredientEditor() {
       let variationName = "Cru";
       let loss = 0;
 
-      if (nameLower.includes("cozido") || nameLower.includes("preparado")) {
-        variationName = "Cozido";
-      } else if (nameLower.includes("frito") || nameLower.includes("grelhado") || nameLower.includes("assado")) {
-        variationName = "Preparado";
+      if (nameLower.includes("cozid") || nameLower.includes("preparad")) {
+        variationName = "Cozido/a";
+      } else if (nameLower.includes("frit") || nameLower.includes("grelhad") || nameLower.includes("assad")) {
+        variationName = "Preparado/a";
       }
 
       newVariations.push({
@@ -1246,17 +1259,25 @@ export default function IngredientEditor() {
                       <div className="space-y-2">
                         {formData.taco_variations.map((variation, index) => (
                           <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
+                            <div className="flex-1">
                               <div className="font-medium">{variation.taco_name}</div>
-                              <div className="text-sm text-gray-500">
-                                Variação: {variation.variation_name} | Perda: {variation.loss_percentage}%
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="text-xs font-medium text-gray-500 whitespace-nowrap">Variação:</span>
+                                <Input 
+                                  value={variation.variation_name} 
+                                  onChange={(e) => updateTacoVariationName(index, e.target.value)}
+                                  className="h-7 text-xs w-32 border-gray-200"
+                                  placeholder="Ex: Cru, Cozida..."
+                                />
+                                <span className="text-xs text-gray-400">| Perda: {variation.loss_percentage}%</span>
                               </div>
-                              {variation.is_base && <Badge variant="outline" className="mt-1 text-gray-700">Base</Badge>}
+                              {variation.is_base && <Badge variant="outline" className="mt-2 text-gray-700 bg-gray-50">Base</Badge>}
                             </div>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 self-start mt-1"
                               onClick={() => removeTacoVariation(index)}
                             >
                               <Trash2 className="w-4 h-4" />

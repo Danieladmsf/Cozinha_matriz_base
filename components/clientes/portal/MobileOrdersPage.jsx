@@ -1477,7 +1477,6 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
           const mergedItem = {
             ...currentMenuItem,
             base_quantity: existingItem.base_quantity || 0,
-            adjustment_percentage: existingItem.adjustment_percentage || 0,
             notes: existingItem.notes || "",
             suggestion: existingItem.suggestion || null,
             sales_window: existingItem.sales_window || currentMenuItem.sales_window || 'all_day',
@@ -2087,9 +2086,8 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
     // Verificar se há itens que podem receber sugestões (vazios OU com valores existentes)
     const hasItemsForSuggestions = currentOrder.items.some(item => {
       const baseQty = utilParseQuantity(item.base_quantity) || 0;
-      const adjustmentPct = utilParseQuantity(item.adjustment_percentage) || 0;
       // Aceitar tanto campos vazios quanto preenchidos para recalculo
-      return baseQty >= 0 || (CategoryLogic.isCarneCategory(item.category) && adjustmentPct >= 0);
+      return baseQty >= 0;
     });
 
     if (!hasItemsForSuggestions) {

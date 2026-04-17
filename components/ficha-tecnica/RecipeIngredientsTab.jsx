@@ -157,6 +157,7 @@ export function RecipeIngredientsTab({
                                 setIsDirty(true);
                             }}
                             removePreparationWrapper={(prepId) => removePreparation(preparationsData, setPreparationsData, prepId)}
+                            onSaveRecipe={handleSaveRecipe}
                         />
 
                         {/* Save Button */}

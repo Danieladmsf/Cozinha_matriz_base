@@ -344,16 +344,30 @@ export default function RecipeTechnicalCollectDialog({
     `;
 
     // Abrir janela de impressão
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    
+    iframe.contentDocument.write(printContent);
+    iframe.contentDocument.close();
+    iframe.contentDocument.title = `Ficha de Coleta - ${recipe.name || 'Sem Nome'}`;
+
+    const originalTitle = document.title;
+    document.title = `Ficha de Coleta - ${recipe.name || 'Sem Nome'}`;
 
     // Aguardar carregamento antes de imprimir
     setTimeout(() => {
-      printWindow.print();
-      // Mantenha a janela aberta para debug se necessário, ou feche:
-      // printWindow.close();
-    }, 750); // Aumentei um pouco o timeout para garantir o carregamento completo do CSS
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // Remove o iframe do DOM após a impressão
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        document.title = originalTitle;
+      }, 2000);
+    }, 750);
   };
 
   return (

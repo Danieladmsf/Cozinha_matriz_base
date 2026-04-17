@@ -18,7 +18,10 @@ export function useIngredientSearch() {
   const loadIngredients = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ingredients?active=true');
+      const response = await fetch('/api/ingredients?active=true', {
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        cache: 'no-store'
+      });
       const allIngredients = await response.json();
       
       if (!response.ok) {

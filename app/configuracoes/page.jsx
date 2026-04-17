@@ -3,39 +3,17 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, addDoc, updateDoc, query, orderBy } from 'firebase/firestore';
-import { Bot, Save, Sparkles, Key, FileText, Loader2, Info, Trash2, CheckCircle2, UserCircle, Plus, Terminal } from 'lucide-react';
+import { Bot, Save, Key, Loader2, Trash2, CheckCircle2, UserCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-
-const DEFAULT_PROMPT = `Você é um Engenheiro de Alimentos rigoroso e Chef Executivo.
-Seu objetivo é processar anotações informais e transformá-las em seções de uma Ficha Técnica Profissional.
-
-DIRETRIZES DE OURO:
-1. Responda APENAS com JSON: {"steps": [{"title": "...", "content": "..."}, ...]}.
-2. O 1º Passo deve ser focado no inventário de itens (Matéria-Prima ou Embalagem).
-3. Use HTML estruturado (<ul>, <li>, <br>) para legibilidade.
-4. Mantenha numeração contínua (1., 2., 3.) através de todos os passos de instrução.
-5. Se o peso não for informado, use "---" ou "A gosto", nunca "undefined".
-
-ESTRUTURA DE TÍTULOS SUGERIDA:
-- Preparo: "1º Passo - MATÉRIA-PRIMA", "2º Passo - PREPARO..."
-- Porcionamento: "1º Passo - PORCIONAMENTO", "2º Passo - ARMAZENAMENTO"
-- Embalagem: "1º Passo - EMBALAGEM", "2º Passo - ETIQUETAGEM"
-
-Exemplo:
-{
-  "steps": [
-    { "title": "1º Passo - MATÉRIA-PRIMA", "content": "<ul><li>Item A: 1kg</li><li>Item B: 500g</li></ul>" },
-    { "title": "2º Passo - EXECUÇÃO", "content": "1. Misture A e B...<br>2. Leve ao forno..." }
-  ]
-}`;
+import { useTenant } from '@/lib/auth/TenantProvider';
 
 export default function AiSettingsPage() {
     const { toast } = useToast();
+    const { tenantId } = useTenant();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [profiles, setProfiles] = useState([]);
@@ -47,7 +25,6 @@ export default function AiSettingsPage() {
         apiKey: '',
         aiProvider: 'gemini',
         baseUrl: '',
-        masterPrompt: DEFAULT_PROMPT,
         isActive: false
     });
 
@@ -56,38 +33,51 @@ export default function AiSettingsPage() {
     // Fetch all profiles and the active one
     const fetchAllData = async () => {
         try {
-            // 1. Get List of Profiles
-            const profilesCol = collection(db, 'settings', 'ai_config', 'profiles');
+            // 1. Get List of Profiles in Tenant Scope
+            const profilesCol = collection(db, `tenants/${tenantId}/settings/ai_config/profiles`);
             const q = query(profilesCol, orderBy('updatedAt', 'desc'));
-            const snapshot = await getDocs(q);
-            const profilesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // 2. Get currently active global config
-            const activeDocRef = doc(db, 'settings', 'ai_config');
+            let snapshot = await getDocs(q);
+            let profilesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // MIGRAÇÃO AUTOMÁTICA: Se o tenant não tem perfis, tenta buscar do escopo global antigo
+            if (profilesList.length === 0) {
+                const oldGlobalProfilesCol = collection(db, 'settings', 'ai_config', 'profiles');
+                const oldGlobalQuery = query(oldGlobalProfilesCol, orderBy('updatedAt', 'desc'));
+                const oldGlobalSnap = await getDocs(oldGlobalQuery);
+                
+                if (!oldGlobalSnap.empty) {
+                    console.log("[Migração] Movendo chaves antigas para o escopo do usuário...");
+                    
+                    const migrationPromises = oldGlobalSnap.docs.map(async (oldDocSnap) => {
+                        const oldData = oldDocSnap.data();
+                        const newDocRef = doc(profilesCol, oldDocSnap.id); // Mantém o mesmo ID
+                        await setDoc(newDocRef, oldData);
+                        return { id: oldDocSnap.id, ...oldData };
+                    });
+
+                    profilesList = await Promise.all(migrationPromises);
+                    console.log(`[Migração] ${profilesList.length} chaves migradas com sucesso!`);
+                    
+                    // Opcionalmente, ativa a primeira chave migrada se nenhuma estiver ativa
+                    if (profilesList.length > 0) {
+                        const activeDocRef = doc(db, `tenants/${tenantId}/settings`, 'ai_config');
+                        await setDoc(activeDocRef, {
+                            ...profilesList[0],
+                            activeProfileId: profilesList[0].id,
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    }
+                }
+            }
+
+            // 2. Get currently active config in Tenant Scope
+            const activeDocRef = doc(db, `tenants/${tenantId}/settings`, 'ai_config');
             const activeDocSnap = await getDoc(activeDocRef);
             
             let activeId = null;
             if (activeDocSnap.exists()) {
                 activeId = activeDocSnap.data().activeProfileId || null;
                 setActiveProfileId(activeId);
-                
-                // If it's the first time and there's old data but no sub-collection profile, migrate it
-                if (profilesList.length === 0 && activeDocSnap.data().apiKey) {
-                    const legacyData = activeDocSnap.data();
-                    const newProfile = {
-                        name: 'Perfil Padrão (Migrado)',
-                        apiKey: legacyData.apiKey,
-                        aiProvider: legacyData.aiProvider,
-                        baseUrl: legacyData.baseUrl || '',
-                        masterPrompt: legacyData.masterPrompt || DEFAULT_PROMPT,
-                        updatedAt: new Date().toISOString()
-                    };
-                    const docAdded = await addDoc(profilesCol, newProfile);
-                    profilesList.push({ id: docAdded.id, ...newProfile });
-                    activeId = docAdded.id;
-                    await updateDoc(activeDocRef, { activeProfileId: activeId });
-                    setActiveProfileId(activeId);
-                }
             }
 
             setProfiles(profilesList);
@@ -143,11 +133,10 @@ export default function AiSettingsPage() {
                 apiKey: formData.apiKey,
                 aiProvider: formData.aiProvider,
                 baseUrl: formData.baseUrl,
-                masterPrompt: formData.masterPrompt,
                 updatedAt: new Date().toISOString()
             };
 
-            const profilesCol = collection(db, 'settings', 'ai_config', 'profiles');
+            const profilesCol = collection(db, `tenants/${tenantId}/settings/ai_config/profiles`);
             let finalId = formData.id;
 
             if (formData.id) {
@@ -173,7 +162,7 @@ export default function AiSettingsPage() {
 
     const activateProfile = async (id, data) => {
         try {
-            const activeDocRef = doc(db, 'settings', 'ai_config');
+            const activeDocRef = doc(db, `tenants/${tenantId}/settings`, 'ai_config');
             await setDoc(activeDocRef, {
                 ...data,
                 activeProfileId: id,
@@ -198,13 +187,13 @@ export default function AiSettingsPage() {
         if (!confirm("Tem certeza que deseja excluir esta configuração?")) return;
 
         try {
-            await deleteDoc(doc(db, 'settings', 'ai_config', 'profiles', id));
+            await deleteDoc(doc(db, `tenants/${tenantId}/settings/ai_config/profiles`, id));
             toast({ title: "Removido", description: "A chave foi excluída permanentemente." });
             
             if (id === activeProfileId) {
                 setActiveProfileId(null);
                 // Opcionalmente limpa o activeProfileId no seletor global
-                await setDoc(doc(db, 'settings', 'ai_config'), { activeProfileId: null }, { merge: true });
+                await setDoc(doc(db, `tenants/${tenantId}/settings`, 'ai_config'), { activeProfileId: null }, { merge: true });
             }
             fetchAllData();
         } catch (error) {
@@ -237,7 +226,7 @@ export default function AiSettingsPage() {
                         <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => setFormData({ id: null, name: 'Nova Alpha', apiKey: '', aiProvider: 'gemini', baseUrl: '', masterPrompt: DEFAULT_PROMPT })}
+                            onClick={() => setFormData({ id: null, name: 'Nova Alpha', apiKey: '', aiProvider: 'gemini', baseUrl: '' })}
                             className="bg-white"
                         >
                             <Plus className="h-4 w-4 mr-1" /> Novo Perfil
@@ -261,7 +250,7 @@ export default function AiSettingsPage() {
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    onClick={() => setFormData({ id: null, name: 'Nova Configuração', apiKey: '', aiProvider: 'gemini', baseUrl: '', masterPrompt: formData.masterPrompt || DEFAULT_PROMPT })}
+                                    onClick={() => setFormData({ id: null, name: 'Nova Configuração', apiKey: '', aiProvider: 'gemini', baseUrl: '' })}
                                     className="text-gray-500 hover:text-blue-600"
                                 >
                                     Limpar / Criar Outro
@@ -350,17 +339,6 @@ export default function AiSettingsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200 space-y-4">
-                         <h2 className="text-xl font-bold flex items-center gap-2 text-amber-900">
-                            <Terminal className="w-5 h-5 text-amber-600" />
-                            Regras de Treinamento (Prompt)
-                        </h2>
-                        <Textarea 
-                            value={formData.masterPrompt}
-                            onChange={(e) => setFormData({...formData, masterPrompt: e.target.value})}
-                            className="min-h-[400px] font-mono text-xs bg-white border-amber-200"
-                        />
-                    </div>
                 </div>
 
                 {/* LADO DIREITO: LISTA DE PERFIS */}

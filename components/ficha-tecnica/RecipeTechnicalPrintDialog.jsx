@@ -575,12 +575,32 @@ export default function RecipeTechnicalPrintDialog({
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    
+    document.body.appendChild(iframe);
+    
+    // Escreve o conteúdo na iframe
+    iframe.contentDocument.write(printContent);
+    iframe.contentDocument.close();
+
+    // Forçamos o título interno. Se o Chrome extrair da Iframe, puxa esse.
+    iframe.contentDocument.title = `Ficha Técnica - ${recipe.name || 'Sem Nome'}`;
+    // E também na janela pai para o caso do Chrome usar o título root para o diálogo de Save As PDF
+    const originalTitle = document.title;
+    document.title = `Ficha Técnica - ${recipe.name || 'Sem Nome'}`;
+    
     setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // Remove o iframe do DOM após a impressão
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        document.title = originalTitle; // Restaura título original após impressão
+      }, 2000);
     }, 750);
   };
 

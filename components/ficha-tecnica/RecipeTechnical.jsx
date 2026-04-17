@@ -110,6 +110,7 @@ import RecipeSettingsDialog from "@/components/receitas/RecipeSettingsDialog";
 import RecipeFormModal from "@/components/receitas/RecipeFormModal";
 import NutritionalInfo from "@/components/receitas/NutritionalInfo";
 import RecipeEngine from '@/lib/recipe-engine/RecipeEngine';
+import { getTenantId } from "@/lib/auth/tenantStore";
 
 export default function RecipeTechnical() {
   const { toast } = useToast();
@@ -715,16 +716,18 @@ export default function RecipeTechnical() {
       try {
         const { db } = await import('@/lib/firebase');
         const { doc, getDoc, collection, query, orderBy, getDocs } = await import('firebase/firestore');
+        const tenantId = getTenantId();
+        if (!tenantId) return; // Silent return se não houver sessão ativa ainda
         
         // 1. Pegar Perfil Ativo
-        const configRef = doc(db, 'settings', 'ai_config');
+        const configRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config');
         const configSnap = await getDoc(configRef);
         
         if (configSnap.exists()) {
           const activeProfileId = configSnap.data().activeProfileId;
           
           if (activeProfileId) {
-            const profileRef = doc(db, 'settings', 'ai_config', 'profiles', activeProfileId);
+            const profileRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config', 'profiles', activeProfileId);
             const profileSnap = await getDoc(profileRef);
             
             if (profileSnap.exists()) {

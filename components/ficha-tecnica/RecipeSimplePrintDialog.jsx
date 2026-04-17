@@ -637,20 +637,31 @@ export default function RecipeSimplePrintDialog({
     `;
 
     // Abrir em nova janela e imprimir
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-
-      printWindow.onload = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    
+    iframe.contentDocument.write(htmlContent);
+    iframe.contentDocument.close();
+    iframe.contentDocument.title = `Receita Ajustada - ${recipe.name || 'Sem Nome'}`;
+    
+    // E também na janela pai para o caso do Chrome usar o título root
+    const originalTitle = document.title;
+    document.title = `Receita Ajustada - ${recipe.name || 'Sem Nome'}`;
+      
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
         setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 500);
-      };
-    } else {
-      console.error("Não foi possível abrir a janela de impressão");
-    }
+          document.body.removeChild(iframe);
+          document.title = originalTitle; // Restaura
+        }, 2000);
+      }, 250);
+    };
   };
 
   if (!recipe) {

@@ -41,8 +41,7 @@ export function useRecipeState() {
   const [aiConfig, setAiConfig] = useState({
     aiProvider: 'gemini',
     apiKey: '',
-    baseUrl: '',
-    masterPrompt: ''
+    baseUrl: ''
   });
 
   // Estados de modais

@@ -1,5 +1,5 @@
 /**
- * Lógica centralizada para cálculos por categoria
+ * Lógica centralizada para cálculos de peso
  */
 
 import { parseQuantity } from "./orderUtils";
@@ -8,36 +8,7 @@ import { calculateItemWeight } from "@/lib/weightCalculator";
 export class CategoryLogic {
 
   /**
-   * Verifica se é categoria carne
-   * @param {string} categoryName - Nome da categoria
-   * @returns {boolean}
-   */
-  static isCarneCategory(categoryName) {
-    return categoryName && categoryName.toLowerCase().includes('carne');
-  }
-
-  /**
-   * Calcula o Total Pedido para categoria carne
-   * REGRA:
-   * - Se Porcionamento vazio/zero: Total Pedido = Quantidade
-   * - Se Porcionamento preenchido: Total Pedido = (Quantidade * 2) * Porcionamento
-   * @param {number} baseQuantity - Quantidade base
-   * @param {number} adjustmentPercentage - Porcentagem de ajuste (porcionamento)
-   * @returns {number} Total pedido calculado
-   */
-  static calculateCarneTotal(baseQuantity, adjustmentPercentage) {
-    const quantity = baseQuantity || 0;
-    const percentage = parseQuantity(adjustmentPercentage) || 0;
-
-    if (percentage === 0) {
-      return quantity;
-    }
-
-    return (quantity * 2) * (percentage / 100);
-  }
-
-  /**
-   * Calcula todos os valores de um item baseado na categoria
+   * Calcula todos os valores de um item
    * @param {Object} item - Item do pedido
    * @param {string} field - Campo sendo alterado
    * @param {any} value - Novo valor
@@ -46,9 +17,6 @@ export class CategoryLogic {
    */
   static calculateItemValues(item, field, value, mealsExpected) {
     const updatedItem = { ...item };
-    const isCarneCategory = this.isCarneCategory(item.category);
-    const unitType = (item.unit_type || '').toLowerCase();
-    const isUnidType = unitType === 'unid' || unitType === 'unid.' || unitType === 'unidade';
 
     // ✅ PRESERVAR dados de peso da receita original antes de qualquer alteração
     const originalCubaWeight = item.cuba_weight;
@@ -65,8 +33,6 @@ export class CategoryLogic {
         ? value
         : inputValue;
 
-    } else if (field === 'adjustment_percentage') {
-      updatedItem.adjustment_percentage = parseQuantity(value) || 0;
     } else if (field === 'sales_window') {
       updatedItem.sales_window = value;
       return updatedItem; // Janela não afeta cálculos imediatos de peso
@@ -79,23 +45,8 @@ export class CategoryLogic {
     if (originalTotalWeight !== undefined) updatedItem.total_weight = originalTotalWeight;
     if (originalYieldWeight !== undefined) updatedItem.yield_weight = originalYieldWeight;
 
-    // Recalcular quantidade total baseado na categoria
-    if (isCarneCategory) {
-      const unit = (item.unit_type || '').toLowerCase();
-      if (unit.includes('cuba') || unit.includes('g') || unit.includes('p')) {
-        // Para carnes com unidade 'cuba', 'g' ou 'p', a quantidade final é a base
-        updatedItem.quantity = updatedItem.base_quantity || 0;
-      } else {
-        // Para outras unidades de carne, usar fórmula específica com porcionamento
-        updatedItem.quantity = this.calculateCarneTotal(
-          updatedItem.base_quantity,
-          updatedItem.adjustment_percentage
-        );
-      }
-    } else {
-      // Para outras categorias: quantidade = base_quantity
-      updatedItem.quantity = updatedItem.base_quantity || 0;
-    }
+    // A quantidade final é sempre base_quantity
+    updatedItem.quantity = updatedItem.base_quantity || 0;
 
     // Recalcular preço total
     updatedItem.total_price = updatedItem.quantity * (updatedItem.unit_price || 0);
@@ -107,61 +58,37 @@ export class CategoryLogic {
     return updatedItem;
   }
 
-
-
   /**
-   * Verifica se deve mostrar colunas especiais para a categoria
+   * Verifica se deve mostrar colunas especiais
+   * Mantido apenas para compatibilidade legada temporária - tudo desativado
    * @param {string} categoryName - Nome da categoria
    * @returns {Object} Configuração de colunas
    */
   static getCategoryColumnConfig(categoryName) {
-    const isCarneCategory = this.isCarneCategory(categoryName);
-
     return {
-      showPorcionamento: isCarneCategory,
-      showTotalPedido: isCarneCategory,
-      isCarneCategory: isCarneCategory
+      showPorcionamento: false,
+      showTotalPedido: false,
+      isCarneCategory: false
     };
   }
 
   /**
-   * Gera cabeçalhos da tabela baseado na categoria
-   * @param {boolean} isCarneCategory - Se é categoria carne
+   * Gera cabeçalhos da tabela
    * @returns {Array} Array de objetos com configuração dos cabeçalhos
    */
-  static getTableHeaders(isCarneCategory) {
-    const baseHeaders = [
+  static getTableHeaders() {
+    return [
       { key: 'item', label: 'Item', className: 'text-left p-2 text-xs font-medium text-blue-700 min-w-[150px]' },
       { key: 'suggestion_quantity', label: 'Sugestão', className: 'text-center p-2 text-xs font-medium text-amber-600 min-w-[60px]' },
-      { key: 'quantity', label: 'Quantidade', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[60px]' }
-    ];
-
-    const carneHeaders = [
-      { key: 'porcionamento', label: 'Porcionamento', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[60px]' },
-      { key: 'total_pedido', label: 'Total Pedido', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[60px]' }
-    ];
-
-    const endHeaders = [
+      { key: 'quantity', label: 'Quantidade', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[60px]' },
       { key: 'subtotal', label: 'Subtotal', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[70px]' },
       { key: 'peso_total', label: 'Peso Total', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[70px]' },
       { key: 'sales_window', label: 'Janela de Oferta', className: 'text-center p-2 text-xs font-medium text-blue-700 min-w-[130px]' }
     ];
-
-    if (isCarneCategory) {
-      return [...baseHeaders, ...carneHeaders, ...endHeaders];
-    }
-
-    return [...baseHeaders, ...endHeaders];
   }
 
   /**
    * Formata linha da tabela para exportação
-   * @param {Object} item - Item do pedido
-   * @param {boolean} isCarneCategory - Se é categoria carne
-   * @param {Function} formatCurrency - Função para formatar moeda
-   * @param {Function} formattedQuantity - Função para formatar quantidade
-   * @param {Function} formatWeight - Função para formatar peso
-   * @returns {string} Linha formatada
    */
   static formatExportRow(item, isCarneCategory, formatCurrency, formattedQuantity, formatWeight) {
     const baseQty = formattedQuantity(item.base_quantity || 0);
@@ -171,26 +98,13 @@ export class CategoryLogic {
     const unitPrice = formatCurrency(item.unit_price || 0);
     const itemHeader = `${item.recipe_name}\n${unitPrice}/${item.unit_type}`;
 
-    if (isCarneCategory) {
-      const adjustmentPct = formattedQuantity(item.adjustment_percentage || 0);
-      const totalQty = formattedQuantity(item.quantity || 0);
-
-      return `${itemHeader} | ${baseQty} | ${adjustmentPct}% | ${totalQty} ${item.unit_type} | ${subtotal} | ${pesoTotal} | ${salesWindow}`;
-    } else {
-      return `${itemHeader} | ${baseQty} | ${subtotal} | ${pesoTotal} | ${salesWindow}`;
-    }
+    return `${itemHeader} | ${baseQty} | ${subtotal} | ${pesoTotal} | ${salesWindow}`;
   }
 
   /**
    * Gera cabeçalho da tabela para exportação
-   * @param {boolean} isCarneCategory - Se é categoria carne
-   * @returns {string} Cabeçalho formatado
    */
-  static getExportHeader(isCarneCategory) {
-    if (isCarneCategory) {
-      return "Item | Quantidade | Porcionamento | Total Pedido | Subtotal | Peso Total | Janela de Venda";
-    } else {
-      return "Item | Quantidade | Subtotal | Peso Total | Janela de Venda";
-    }
+  static getExportHeader() {
+    return "Item | Quantidade | Subtotal | Peso Total | Janela de Venda";
   }
 }

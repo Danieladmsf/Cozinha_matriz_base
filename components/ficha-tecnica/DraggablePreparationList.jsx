@@ -55,7 +55,8 @@ const DraggablePreparationList = ({
     onDropPop,
     onEditPop,
     prioritizedCommand,
-    onBatchUpdatePreparations
+    onBatchUpdatePreparations,
+    onSaveRecipe
 }) => {
     // ==== LOCAL UI STATE ====
     const [expandedCards, setExpandedCards] = useState(() => {
@@ -68,6 +69,14 @@ const DraggablePreparationList = ({
     const [editingTitle, setEditingTitle] = useState(null); // Index being edited
     const [tempTitle, setTempTitle] = useState('');
     const [activeAiChatPrepIndex, setActiveAiChatPrepIndex] = useState(null);
+    const [pendingAutoSave, setPendingAutoSave] = useState(false);
+
+    React.useEffect(() => {
+        if (pendingAutoSave && onSaveRecipe) {
+            onSaveRecipe();
+            setPendingAutoSave(false);
+        }
+    }, [preparations, pendingAutoSave, onSaveRecipe]);
 
     // Assegura que novas preparações ou ao carregar a receita abram expandidas
     React.useEffect(() => {
@@ -815,6 +824,7 @@ const DraggablePreparationList = ({
             {activeAiChatPrepIndex !== null && (
                 <AiAssistantChat 
                     prep={preparations[activeAiChatPrepIndex]}
+                    allPreparations={preparations}
                     onClose={() => setActiveAiChatPrepIndex(null)}
                     onUpdateHistory={(newHistory) => {
                         setPreparations(prev => {
@@ -822,6 +832,17 @@ const DraggablePreparationList = ({
                             newData[activeAiChatPrepIndex] = {
                                 ...newData[activeAiChatPrepIndex],
                                 aiHistory: newHistory
+                            };
+                            return newData;
+                        });
+                        onDirty(true);
+                    }}
+                    onUpdateDraft={(newDraft) => {
+                        setPreparations(prev => {
+                            const newData = [...prev];
+                            newData[activeAiChatPrepIndex] = {
+                                ...newData[activeAiChatPrepIndex],
+                                aiDraft: newDraft
                             };
                             return newData;
                         });
@@ -837,6 +858,9 @@ const DraggablePreparationList = ({
                             return newData;
                         });
                         onDirty(true);
+                    }}
+                    onAutoSave={() => {
+                        setPendingAutoSave(true);
                     }}
                 />
             )}
