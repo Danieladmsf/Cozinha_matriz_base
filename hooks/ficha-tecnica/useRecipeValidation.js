@@ -5,7 +5,7 @@
  * Inclui validação de campos obrigatórios, consistência de dados e regras de negócio.
  * 
  * @version 1.0.0
- * @author Sistema Cozinha Afeto
+ * @author Sistema Food 360
  */
 
 import { useState, useCallback, useMemo } from 'react';

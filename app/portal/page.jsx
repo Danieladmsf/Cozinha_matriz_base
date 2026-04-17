@@ -51,7 +51,7 @@ export default function PortalIndex() {
             Portal do Cliente
           </h1>
           <p className="text-gray-600 mb-6">
-            Cozinha Afeto
+            Food 360
           </p>
 
           <div className="space-y-4">

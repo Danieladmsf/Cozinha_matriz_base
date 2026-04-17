@@ -146,7 +146,7 @@ export async function POST(request) {
     // 1. Criar usuário mock
     try {
       const mockUser = {
-        email: 'dev@cozinhaafeto.com',
+        email: 'dev@food360.com',
         displayName: 'Usuário de Desenvolvimento',
         photoURL: null,
         preferences: {

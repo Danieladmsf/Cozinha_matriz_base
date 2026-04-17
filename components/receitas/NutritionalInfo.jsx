@@ -455,7 +455,7 @@ export default function NutritionalInfo({ recipe, autoExpand = false }) {
 
   return (
     <div className="mt-2">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center print:hidden">
         <h4 className="font-medium">Informação Nutricional</h4>
         <div className="flex gap-1 print:hidden">
           {/* Controles de porção e nutrientes */}

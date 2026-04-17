@@ -569,7 +569,7 @@ export default function RecipeTechnicalPrintDialog({
 
     printContent += `
         <div class="footer">
-          Ficha técnica gerada por <span class="footer-brand">Cozinha e Afeto</span> - ${format(futureDate, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+          Ficha técnica gerada por <span class="footer-brand">Food 360</span> - ${format(futureDate, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
         </div>
       </body>
       </html>

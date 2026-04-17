@@ -192,7 +192,7 @@ export const usePrintMenu = () => {
           ${customerId !== 'all' ? `<div class="client-info">Cliente: ${getCustomerName(customerId, customers, locations)}</div>` : ''}
           <div class="generation-info" style="margin-top: 5px;">
             <span>Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-            <span class="brand">Cozinha & Afeto</span>
+            <span class="brand">Food 360</span>
           </div>
         </div>
       `;

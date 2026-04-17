@@ -275,7 +275,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color:
 </div>
 ${sectionsHTML || '<p style="text-align: center; color: #9ca3af; padding: 40px;">Nenhum dado configurado para este dia.</p>'}
 <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #9ca3af;">
-Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+Food 360 — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
 </div>
 </body>
 </html>`.trim();
@@ -357,7 +357,7 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color:
 </div>
 ${sectionsHTML || '<p style="text-align: center; color: #9ca3af; padding: 40px;">Nenhum dado para este dia.</p>'}
 <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #d1d5db; text-align: center; font-size: 11px; color: #9ca3af;">
-Cozinha Afeto — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+Food 360 — Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
 </div>
 </body>
 </html>`.trim();

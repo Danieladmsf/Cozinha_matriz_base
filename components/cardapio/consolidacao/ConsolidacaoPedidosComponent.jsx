@@ -340,7 +340,7 @@ const ConsolidacaoPedidosComponent = () => {
 
                 {/* Footer para impressão */}
                 <div className="hidden print:block mt-12 pt-6 border-t border-gray-300 text-center text-sm text-gray-600">
-                  <p>Cozinha Afeto - Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                  <p>Food 360 - Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
               </div>
             );

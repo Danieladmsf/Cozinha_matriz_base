@@ -6,7 +6,7 @@
  * Fornece interface reativa e type-safe.
  * 
  * @version 2.0.0
- * @author Sistema Cozinha Afeto
+ * @author Sistema Food 360
  */
 
 import { useCallback } from 'react';

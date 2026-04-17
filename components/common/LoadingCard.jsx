@@ -28,7 +28,7 @@ export const LoadingCard = ({
       <Card className={className}>
         <CardContent className="pt-6 text-center">
           <div className="relative w-36 h-36 mx-auto mb-4 flex items-center justify-center rounded-full border-4 border-orange-400 animate-pulse">
-            <img src="/Logo.jpg" alt="Cozinha & Afeto Logo" className="w-32 h-32 rounded-full object-cover" />
+            <img src="/Logo.jpg" alt="Food 360 Logo" className="w-32 h-32 rounded-full object-cover" />
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-orange-500 animate-spin"></div>
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-2">

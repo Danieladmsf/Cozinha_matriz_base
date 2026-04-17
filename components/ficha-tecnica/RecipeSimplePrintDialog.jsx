@@ -630,7 +630,7 @@ export default function RecipeSimplePrintDialog({
 
     htmlContent += `
         <div class="footer">
-          Ficha técnica gerada por Cozinha e Afeto - ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+          Ficha técnica gerada por Food 360 - ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}
         </div>
       </body>
       </html>

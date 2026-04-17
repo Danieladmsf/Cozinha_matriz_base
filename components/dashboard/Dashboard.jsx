@@ -23,7 +23,7 @@ export default function Dashboard() {
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      "name": "Cozinha Afeto",
+      "name": "Food 360",
       "description": "Sistema de gestão completo para restaurantes",
       "url": "http://localhost:9000",
       "applicationCategory": "RestaurantManagement",

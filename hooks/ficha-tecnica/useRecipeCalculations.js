@@ -5,7 +5,7 @@
  * Remove duplicação e fornece interface consistente para componentes.
  * 
  * @version 2.0.0
- * @author Sistema Cozinha Afeto
+ * @author Sistema Food 360
  */
 
 import { useCallback, useMemo } from 'react';

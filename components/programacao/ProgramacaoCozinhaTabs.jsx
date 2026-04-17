@@ -185,7 +185,7 @@ const ConsolidacaoContent = ({
                   </div>
 
                   <div className="hidden print:block mt-12 pt-6 border-t border-gray-300 text-center text-sm text-gray-600">
-                    <p>Cozinha Afeto - Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    <p>Food 360 - Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                 </CardContent>
@@ -885,7 +885,7 @@ const ProgramacaoCozinhaTabs = () => {
         FONTE: ${fontSize}px
       </div>
       <div class="page-footer">
-        <p>Cozinha Afeto - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
+        <p>Food 360 - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
       </div>
     `;
   };
@@ -898,7 +898,7 @@ const ProgramacaoCozinhaTabs = () => {
         FONTE: ${fontSize}px
       </div>
       <div class="page-footer">
-        <p>Cozinha Afeto - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
+        <p>Food 360 - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
       </div>
     `;
   };
@@ -911,7 +911,7 @@ const ProgramacaoCozinhaTabs = () => {
         FONTE: ${fontSize}px
       </div>
       <div class="page-footer">
-        <p>Cozinha Afeto - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
+        <p>Food 360 - Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}</p>
       </div>
     `;
   };
