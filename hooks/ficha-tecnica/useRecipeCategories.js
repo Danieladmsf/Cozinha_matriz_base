@@ -61,13 +61,9 @@ export function useRecipeCategories() {
         return;
       }
 
-      // Carregar do CategoryTree baseado no tipo via API
-      const response = await fetch(`/api/category-tree?type=${categoryType}`);
-      const filteredCategories = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(filteredCategories.error || 'Erro ao carregar categorias');
-      }
+      // Carregar do CategoryTree baseado no tipo
+      const allCategoryTrees = await CategoryTree.getAll();
+      const filteredCategories = allCategoryTrees.filter(cat => cat.type === categoryType);
 
       if (filteredCategories.length === 0) {
         // Fallback para categorias padrão

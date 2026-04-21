@@ -14,21 +14,13 @@ export function useIngredientSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredIngredients, setFilteredIngredients] = useState([]);
 
-  // Carregar todos os ingredientes via API
+  // Carregar todos os ingredientes
   const loadIngredients = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/ingredients?active=true', {
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-        cache: 'no-store'
-      });
-      const allIngredients = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(allIngredients.error || 'Erro ao carregar ingredientes');
-      }
-      
-      setIngredients(allIngredients);
+      const allIngredients = await Ingredient.getAll();
+      const activeIngredients = allIngredients.filter(ing => ing.active !== false);
+      setIngredients(activeIngredients);
     } catch (error) {
       toast({
         title: "Erro ao carregar ingredientes",

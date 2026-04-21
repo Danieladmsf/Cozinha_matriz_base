@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui';
+import { Recipe } from '@/app/api/entities';
 
 export function useRecipeQuickEditor() {
   const { toast } = useToast();
@@ -13,12 +14,8 @@ export function useRecipeQuickEditor() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/recipes');
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-      const sortedRecipes = result.data.sort((a, b) => a.name.localeCompare(b.name));
+      const allRecipes = await Recipe.getAll();
+      const sortedRecipes = allRecipes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       setRecipes(sortedRecipes);
       return { success: true, recipes: sortedRecipes };
     } catch (error) {
@@ -44,9 +41,7 @@ export function useRecipeQuickEditor() {
 
   const deleteRecipe = useCallback(async (recipeId) => {
     try {
-      const response = await fetch(`/api/recipes?id=${recipeId}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error);
+      await Recipe.delete(recipeId);
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
       toast({ title: "Receita excluída", description: "A receita foi removida com sucesso." });
       return { success: true };
@@ -61,13 +56,8 @@ export function useRecipeQuickEditor() {
     let failCount = 0;
     for (const id of recipeIds) {
       try {
-        const response = await fetch(`/api/recipes?id=${id}`, { method: 'DELETE' });
-        const result = await response.json();
-        if (result.success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
+        await Recipe.delete(id);
+        successCount++;
       } catch {
         failCount++;
       }

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useToast } from '@/components/ui';
+import { Recipe } from '@/app/api/entities';
 
 /**
  * Hook para gerenciar operações CRUD da Ficha Técnica
@@ -346,14 +347,7 @@ export function useRecipeOperations() {
 
   const loadRecipe = useCallback(async (recipeId) => {
     try {
-      const response = await fetch(`/api/recipes?id=${recipeId}`, { cache: 'no-store' });
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const recipe = result.data;
+      const recipe = await Recipe.getById(recipeId);
 
       if (!recipe) {
         throw new Error('Receita não encontrada');

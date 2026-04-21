@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui';
 import { filterAndSortByRelevance } from '@/lib/searchUtils';
 
+import { Recipe } from '@/app/api/entities';
+
 /**
  * Hook para gerenciar busca e filtragem de receitas
  * Responsável por carregar receitas do banco e filtrar baseado na query
@@ -17,20 +19,13 @@ export function useRecipeSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Carregar todas as receitas do banco via API
+  // Carregar todas as receitas do banco
   const loadAllRecipes = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/recipes');
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const recipes = result.data;
+      const recipes = await Recipe.getAll();
       const activeRecipes = recipes.filter(recipe => recipe.active !== false);
 
       setAllRecipes(activeRecipes);

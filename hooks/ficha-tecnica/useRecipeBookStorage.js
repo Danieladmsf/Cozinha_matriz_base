@@ -1,5 +1,7 @@
 import { useCallback } from 'react';
 
+import { Recipe } from '@/app/api/entities';
+
 /**
  * Hook para encapsular chamadas de persistência (salvar ficha técnica no banco)
  * abstraindo o "saveRecipeToFirestore" pra fora do RecipeBook.jsx
@@ -8,7 +10,6 @@ export function useRecipeBookStorage() {
 
     /**
      * Função auxiliar para salvar a receita e suas preparações de volta no banco de dados.
-     * Chama a API Route central para garantir segurança.
      * 
      * @param {Object} recipe Objeto da receita
      * @param {Array} preparations Lista de preparações atreladas à receita
@@ -27,16 +28,7 @@ export function useRecipeBookStorage() {
                 preparations: preparations
             };
 
-            const response = await fetch(`/api/recipes?id=${recipe.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Erro ao salvar no banco de dados');
-            }
+            await Recipe.update(recipe.id, payload);
 
             console.log(`✅ Receita ${recipe.id} salva no Firestore via API com sucesso!`);
             return true;
