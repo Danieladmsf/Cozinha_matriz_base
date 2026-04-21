@@ -123,20 +123,22 @@ export default function TenantProvider({ children, publicRoutes = [] }) {
 
                 // 🏭 Semear dados de fábrica (Insumos, Fornecedores, Preços, TACO)
                 try {
-                    console.log('[TenantProvider] 🏭 Semeando dados de fábrica...');
-                    const seedRes = await fetch('/api/seed-tenant', {
+                    console.log('[TenantProvider] 🏭 Iniciando seed de dados de fábrica em background...');
+                    fetch('/api/seed-tenant', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ tenantId: newTenantId })
+                    }).then(res => res.json()).then(seedResult => {
+                        if (seedResult.success) {
+                            console.log('[TenantProvider] 🏭 Dados de fábrica semeados:', seedResult.counts);
+                        } else {
+                            console.error('[TenantProvider] 🏭 Erro no seed:', seedResult.error);
+                        }
+                    }).catch(seedFactoryErr => {
+                        console.error('[TenantProvider] 🏭 Erro ao semear dados de fábrica:', seedFactoryErr);
                     });
-                    const seedResult = await seedRes.json();
-                    if (seedResult.success) {
-                        console.log('[TenantProvider] 🏭 Dados de fábrica semeados:', seedResult.counts);
-                    } else {
-                        console.error('[TenantProvider] 🏭 Erro no seed:', seedResult.error);
-                    }
-                } catch (seedFactoryErr) {
-                    console.error('[TenantProvider] 🏭 Erro ao semear dados de fábrica:', seedFactoryErr);
+                } catch (err) {
+                    console.error('[TenantProvider] Erro ao disparar seed:', err);
                 }
 
                 console.log('[TenantProvider] ✅ Tenant criado:', newTenantId);
