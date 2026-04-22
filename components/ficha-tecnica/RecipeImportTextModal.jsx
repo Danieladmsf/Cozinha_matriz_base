@@ -64,21 +64,27 @@ export function RecipeImportTextModal({
         setLoading(true);
 
         try {
-            // Carrega aiConfig do Firestore (igual ao AiAssistantChat)
+            // ETAPA 1: Carregar aiConfig do Firestore
+            console.log('🔵 [ImportText] ETAPA 1: Carregando aiConfig do Firestore...');
             const { doc, getDoc } = await import('firebase/firestore');
             const tenantId = getTenantId();
+            console.log('🔵 [ImportText] TenantId:', tenantId);
             if (!tenantId) throw new Error("Sessão do usuário (Tenant ID) não encontrada.");
 
             const docRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config');
             const docSnap = await getDoc(docRef);
+            console.log('🔵 [ImportText] ai_config existe?', docSnap.exists());
 
             let resolvedAiConfig = {};
             if (docSnap.exists()) {
                 const rootData = docSnap.data();
+                console.log('🔵 [ImportText] rootData keys:', Object.keys(rootData));
                 const activeProfileId = rootData.activeProfileId;
+                console.log('🔵 [ImportText] activeProfileId:', activeProfileId);
                 if (activeProfileId) {
                     const profileRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config', 'profiles', activeProfileId);
                     const profileSnap = await getDoc(profileRef);
+                    console.log('🔵 [ImportText] profile existe?', profileSnap.exists());
                     if (profileSnap.exists()) {
                         resolvedAiConfig = profileSnap.data();
                     }
@@ -87,10 +93,13 @@ export function RecipeImportTextModal({
                 }
             }
 
+            console.log('🔵 [ImportText] ETAPA 2: Config resolvida. Provider:', resolvedAiConfig.aiProvider, '| API Key presente?', !!resolvedAiConfig.apiKey);
             if (!resolvedAiConfig.apiKey) {
                 throw new Error('Chave da API não configurada. Vá no Menu Lateral > Configurações da I.A.');
             }
 
+            // ETAPA 3: Chamar a API
+            console.log('🔵 [ImportText] ETAPA 3: Chamando /api/parse-recipe-ingredients...');
             const response = await fetch('/api/parse-recipe-ingredients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -102,23 +111,27 @@ export function RecipeImportTextModal({
                 })
             });
 
+            console.log('🔵 [ImportText] ETAPA 4: Response status:', response.status);
             const data = await response.json();
+            console.log('🔵 [ImportText] ETAPA 5: Response data:', JSON.stringify(data).substring(0, 500));
             if (!response.ok) throw new Error(data.error || 'Erro ao processar texto');
 
             setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
 
             if (data.ingredients && Array.isArray(data.ingredients)) {
+                console.log('✅ [ImportText] Ingredientes detectados:', data.ingredients.length);
                 setParsedResult({ ingredients: data.ingredients });
                 performMatching(data.ingredients);
             }
             
         } catch (error) {
+            console.error('❌ [ImportText] ERRO CAPTURADO:', error.message, error);
             toast({
                 title: "Erro na Importação",
                 description: error.message,
                 variant: "destructive"
             });
-            setMessages([...newMessages, { role: 'assistant', content: "Desculpe, tive um problema ao analisar os ingredientes. Pode tentar novamente?" }]);
+            setMessages([...newMessages, { role: 'assistant', content: `❌ Erro: ${error.message}` }]);
         } finally {
             setLoading(false);
         }
