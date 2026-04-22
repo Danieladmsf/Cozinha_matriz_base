@@ -32,7 +32,8 @@ import {
     Info,
     ExternalLink,
     List,
-    LayoutGrid
+    LayoutGrid,
+    Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRecipeStore } from '@/hooks/ficha-tecnica/useRecipeStore';
@@ -41,6 +42,8 @@ import { useRecipeImageUpload } from '@/hooks/ficha-tecnica/useRecipeImageUpload
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { getTenantId } from '@/lib/auth/tenantStore';
 
 // Paleta de cores para seleção múltipla
 const HIGHLIGHT_PALETTE = [
@@ -91,6 +94,8 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
     const [loadingTools, setLoadingTools] = useState(false);
     const [highlightedTools, setHighlightedTools] = useState([]); // Array de IDs selecionados
     const [showPortioningSummary, setShowPortioningSummary] = useState(false); // Toggle: false = lista ingredientes, true = resumo porcionamento
+    const [isFinalizingAI, setIsFinalizingAI] = useState(false);
+    const { toast } = useToast();
 
     // Custom Hooks de Infraestrutura extraídos do componente
     const { saveRecipeToFirestore } = useRecipeBookStorage();
@@ -488,8 +493,103 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
             window.print();
             setTimeout(() => {
                 document.title = originalTitle;
-            }, 1000); // 1 segundo é suficiente para garantir que a janela de diálogo leu o título
+            }, 1000);
         }, 50);
+    };
+
+    // FINALIZAR COM I.A. — Preenche Qualidade e PCC automaticamente
+    const handleFinalizeWithAI = async () => {
+        if (isFinalizingAI) return;
+        setIsFinalizingAI(true);
+
+        try {
+            // 1. Carregar aiConfig do Firestore
+            const { doc, getDoc } = await import('firebase/firestore');
+            const tenantId = getTenantId();
+            if (!tenantId) throw new Error('Sessão não encontrada.');
+
+            const configRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config');
+            const configSnap = await getDoc(configRef);
+            let aiConfig = {};
+            if (configSnap.exists()) {
+                const rootData = configSnap.data();
+                if (rootData.activeProfileId) {
+                    const profileRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config', 'profiles', rootData.activeProfileId);
+                    const profileSnap = await getDoc(profileRef);
+                    if (profileSnap.exists()) aiConfig = profileSnap.data();
+                } else {
+                    aiConfig = rootData;
+                }
+            }
+            if (!aiConfig.apiKey) throw new Error('Chave da API não configurada. Vá em Configurações da I.A.');
+
+            // 2. Montar o contexto da receita
+            const prepsContext = (recipeData.preparations || []).map((prep, idx) => {
+                const ingList = (prep.ingredients || []).map(ing => {
+                    const weight = parseFloat(ing.weight_raw || ing.weight_clean || 0) * 1000;
+                    return `  - ${ing.name}: ${weight.toFixed(0)}g`;
+                }).join('\n');
+                const instructions = prep.instructions || prep.description || 'Sem instruções';
+                const notes = (prep.notes || []).filter(n => n.content).map(n => n.content).join('\n');
+                return `ETAPA ${idx + 1}: ${prep.title || prep.name || 'Preparo'}\nINGREDIENTES:\n${ingList}\nINSTRUÇÕES:\n${instructions}${notes ? `\nNOTAS:\n${notes}` : ''}`;
+            }).join('\n\n');
+
+            const recipeContext = `RECEITA: ${recipeData.name || 'Sem nome'}\nCATEGORIA: ${recipeData.category || 'N/A'}\nRENDIMENTO: ${yieldData.value} ${yieldData.unit}\nTEMPO DE PREPARO: ${recipeData.prep_time || 0} min\n\n${prepsContext}`;
+
+            // 3. Chamar a API
+            const response = await fetch('/api/finalize-recipe-quality', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipeContext,
+                    provider: aiConfig.aiProvider || 'gemini',
+                    apiKey: aiConfig.apiKey,
+                    baseUrl: aiConfig.baseUrl
+                })
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.details || result.error);
+
+            const data = result.data;
+
+            // 4. Preencher os campos
+            const newLocalData = {
+                ...localData,
+                shelf_life: data.shelf_life || localData.shelf_life,
+                storage_temperature: data.storage_temperature || localData.storage_temperature,
+                allergens: data.allergens || localData.allergens,
+                ccp_notes: data.ccp_notes || localData.ccp_notes
+            };
+            setLocalData(newLocalData);
+
+            // 5. Salvar automaticamente no Firestore
+            actions.setRecipeField('shelf_life', newLocalData.shelf_life);
+            actions.setRecipeField('storage_temperature', newLocalData.storage_temperature);
+            actions.setRecipeField('ccp_notes', newLocalData.ccp_notes);
+            actions.setRecipeField('allergens', newLocalData.allergens);
+
+            const updatedRecipe = {
+                ...recipeData,
+                ...newLocalData
+            };
+            await saveRecipeToFirestore(updatedRecipe, recipeData.preparations || []);
+
+            toast({
+                title: '✅ Ficha Finalizada!',
+                description: 'Validade, Armazenamento, Alergênicos e PCC preenchidos pela I.A.',
+            });
+
+        } catch (error) {
+            console.error('❌ Erro ao finalizar com I.A.:', error);
+            toast({
+                title: 'Erro na Finalização',
+                description: error.message,
+                variant: 'destructive'
+            });
+        } finally {
+            setIsFinalizingAI(false);
+        }
     };
 
 
@@ -1056,6 +1156,19 @@ export default function RecipeBook({ recipeData: initialData, isDraft = false, o
                                 <Button variant="outline" size="sm" onClick={handlePrint}>
                                     <Printer className="w-4 h-4 mr-2" />
                                     Imprimir
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    onClick={handleFinalizeWithAI}
+                                    disabled={isFinalizingAI}
+                                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all"
+                                >
+                                    {isFinalizingAI ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                    )}
+                                    {isFinalizingAI ? 'Analisando...' : 'Finalizar com I.A.'}
                                 </Button>
                             </div>
                         </div>
