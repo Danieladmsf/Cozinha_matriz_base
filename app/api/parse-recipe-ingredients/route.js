@@ -35,8 +35,14 @@ REGRAS ESTritas de JSON:
 3. Para os "ingredients":
 - CRÍTICO: Converta TUDO absolutamente para "kg", "L" ou "un". NUNCA use "g" ou "ml" como unidade.
 - Se o usuário falar em gramas ou mililitros, divida por 1000. Exemplo: "25g de sal" -> amount: 0.025, unit: "kg". "700ml de água" -> amount: 0.700, unit: "L".
-- O valor de amount deve ser sempre o número correspondente ao peso em quilos ou litros (ex: 1.2 para 1.2kg).
-- Se o usuário pedir para remover um item na conversa atual, remova-o do array.
+- Se o usuário usar medidas caseiras (xícara, colher, pitada, folha, dente, etc), FAÇA A ESTIMATIVA PARA KG OU LITROS:
+   * 1 xícara = ~0.200 kg/L (depende da densidade, ex: farinha 0.120, óleo 0.200)
+   * 1 colher (sopa) = ~0.015 kg/L
+   * 1 colher (chá) = ~0.005 kg/L
+   * 1 pitada = ~0.001 kg
+   * 1 folha/raspas = ~0.002 kg ou use "un"
+   * Suco de 1 limão = ~0.040 L
+- O valor de \`amount\` DEVE ser SEMPRE um número float (ex: 0.15). Se for uma fração ou string (ex: "1/4"), calcule o valor decimal (ex: 0.25) e depois aplique a conversão. Nunca coloque texto no amount. Se não houver quantidade descrita, assuma 1 e use "un".
 - Remova gírias e palavras desnecessárias (ex: "de cebola" -> "cebola").
 - Este array deve representar a RECEITA COMPLETA ATUALIZADA no momento.`;
 
