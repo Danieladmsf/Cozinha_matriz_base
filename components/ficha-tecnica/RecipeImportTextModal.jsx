@@ -2,16 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, CheckCircle2, AlertCircle, Trash2, Send, ChefHat, User } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, AlertCircle, Trash2, Send, ChefHat, User, Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getTenantId } from '@/lib/auth/tenantStore';
 
 export function RecipeImportTextModal({ 
     isOpen, 
     onClose, 
     onImport, 
     availableIngredients = [],
+    availableRecipes = [],
     aiConfig = {}
 }) {
     const { toast } = useToast();
@@ -21,6 +25,7 @@ export function RecipeImportTextModal({
     const [parsedResult, setParsedResult] = useState(null); // { ingredients: [...] }
     const [matchedItems, setMatchedItems] = useState([]); // [{ raw, matched, status }]
     const [stepTitle, setStepTitle] = useState('1º Etapa: Preparo');
+    const [registeringIdx, setRegisteringIdx] = useState(null); // índice do item sendo cadastrado
     const scrollRef = useRef(null);
 
     // Initial greeting
@@ -59,14 +64,41 @@ export function RecipeImportTextModal({
         setLoading(true);
 
         try {
+            // Carrega aiConfig do Firestore (igual ao AiAssistantChat)
+            const { doc, getDoc } = await import('firebase/firestore');
+            const tenantId = getTenantId();
+            if (!tenantId) throw new Error("Sessão do usuário (Tenant ID) não encontrada.");
+
+            const docRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config');
+            const docSnap = await getDoc(docRef);
+
+            let resolvedAiConfig = {};
+            if (docSnap.exists()) {
+                const rootData = docSnap.data();
+                const activeProfileId = rootData.activeProfileId;
+                if (activeProfileId) {
+                    const profileRef = doc(db, 'tenants', tenantId, 'settings', 'ai_config', 'profiles', activeProfileId);
+                    const profileSnap = await getDoc(profileRef);
+                    if (profileSnap.exists()) {
+                        resolvedAiConfig = profileSnap.data();
+                    }
+                } else {
+                    resolvedAiConfig = rootData;
+                }
+            }
+
+            if (!resolvedAiConfig.apiKey) {
+                throw new Error('Chave da API não configurada. Vá no Menu Lateral > Configurações da I.A.');
+            }
+
             const response = await fetch('/api/parse-recipe-ingredients', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: newMessages,
-                    provider: aiConfig.aiProvider || 'gemini',
-                    apiKey: aiConfig.apiKey,
-                    baseUrl: aiConfig.baseUrl
+                    provider: resolvedAiConfig.aiProvider || 'gemini',
+                    apiKey: resolvedAiConfig.apiKey,
+                    baseUrl: resolvedAiConfig.baseUrl
                 })
             });
 
@@ -93,30 +125,114 @@ export function RecipeImportTextModal({
     };
 
     const performMatching = (rawIngredients) => {
+        console.log("🔍 [AI Match] Iniciando comparação para:", rawIngredients.length, "itens.");
+        console.log("📊 [Contexto] Disponíveis: ", availableIngredients.length, "ingredientes,", availableRecipes.length, "receitas.");
+
         const results = rawIngredients.map(raw => {
-            const searchTerm = raw.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            // Normalização agressiva: minúsculo, sem acentos, sem espaços extras
+            const normalize = (str) => {
+                if (!str) return '';
+                return str.toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            };
+
+            const searchTerm = normalize(raw.name);
+            console.log(`🔎 [Busca] "${raw.name}" → normalizado: "${searchTerm}"`);
             
-            // Busca por similaridade simples
+            // 1. Busca em Ingredientes
+            let matchType = 'ingredient';
             let bestMatch = availableIngredients.find(ing => {
-                const ingName = ing.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                const ingName = normalize(ing.name);
                 return ingName === searchTerm;
             });
-
+            
             if (!bestMatch) {
                 bestMatch = availableIngredients.find(ing => {
-                    const ingName = ing.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    const ingName = normalize(ing.name);
                     return ingName.includes(searchTerm) || searchTerm.includes(ingName);
                 });
+            }
+
+            // 2. Busca em Receitas (Sub-preparos) se não encontrou em ingredientes
+            if (!bestMatch) {
+                bestMatch = availableRecipes.find(rec => {
+                    const recName = normalize(rec.name);
+                    return recName === searchTerm;
+                });
+                
+                if (bestMatch) matchType = 'recipe';
+                
+                if (!bestMatch) {
+                    bestMatch = availableRecipes.find(rec => {
+                        const recName = normalize(rec.name);
+                        return recName.includes(searchTerm) || searchTerm.includes(recName);
+                    });
+                    if (bestMatch) matchType = 'recipe';
+                }
+            }
+
+            if (bestMatch) {
+                console.log(`✅ [Match] Encontrado: "${bestMatch.name}" (${matchType})`);
+            } else {
+                console.warn(`❌ [Match] Não encontrado: "${raw.name}"`);
             }
 
             return {
                 raw,
                 matched: bestMatch || null,
-                status: bestMatch ? 'found' : 'not_found'
+                status: bestMatch ? 'found' : 'not_found',
+                type: bestMatch ? matchType : null
             };
         });
 
         setMatchedItems(results);
+    };
+
+    // Cadastro rápido de ingrediente não encontrado
+    const handleQuickRegister = async (item, index) => {
+        const tenantId = getTenantId();
+        if (!tenantId) {
+            toast({ title: 'Erro', description: 'Sessão do usuário não encontrada.', variant: 'destructive' });
+            return;
+        }
+
+        setRegisteringIdx(index);
+        try {
+            const ingredientName = item.raw.name
+                .split(' ')
+                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                .join(' ');
+
+            const newIngredient = {
+                name: ingredientName,
+                active: true,
+                item_type: 'ingrediente',
+                current_price: 0,
+                unit_type: 'kg',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            const colRef = collection(db, 'tenants', tenantId, 'Ingredient');
+            const docRef = await addDoc(colRef, newIngredient);
+
+            // Atualiza estado local para mostrar como vinculado
+            setMatchedItems(prev => prev.map((m, i) => 
+                i === index
+                    ? { ...m, status: 'found', type: 'ingredient', matched: { id: docRef.id, name: ingredientName, current_price: 0, unit_type: 'kg' } }
+                    : m
+            ));
+
+            toast({ title: 'Cadastrado!', description: `"${ingredientName}" foi adicionado ao banco de insumos.` });
+        } catch (error) {
+            console.error('Erro ao cadastrar ingrediente:', error);
+            toast({ title: 'Erro', description: `Falha ao cadastrar: ${error.message}`, variant: 'destructive' });
+        } finally {
+            setRegisteringIdx(null);
+        }
     };
 
     const handleClearChat = () => {
@@ -138,13 +254,27 @@ export function RecipeImportTextModal({
             return;
         }
 
-        const ingredientsToImport = matchedItems
+        const itemsToImport = matchedItems
             .filter(item => item.status === 'found')
-            .map(item => ({
-                ingredient_id: item.matched.id,
-                ...item.matched, // Traz tudo: preço, perdas, etc.
-                weight_raw: item.raw.amount,
-            }));
+            .map(item => {
+                if (item.type === 'recipe') {
+                    return {
+                        id: String(Date.now() + Math.random()),
+                        recipe_id: item.matched.id,
+                        name: item.matched.name,
+                        amount: item.raw.amount,
+                        unit: item.matched.yield_unit || item.raw.unit || 'Kg',
+                        type: 'recipe', // Crucial para o handleImportFromText saber que é uma receita
+                        cost: item.matched.total_cost || 0
+                    };
+                }
+                return {
+                    ingredient_id: item.matched.id,
+                    ...item.matched, // Traz tudo: preço, perdas, etc.
+                    weight_raw: item.raw.amount,
+                    type: 'ingredient'
+                };
+            });
 
         const missingNames = matchedItems
             .filter(item => item.status === 'not_found')
@@ -152,7 +282,7 @@ export function RecipeImportTextModal({
 
         onImport({
             title: stepTitle,
-            ingredients: ingredientsToImport,
+            ingredients: itemsToImport,
             missingItems: missingNames
         });
 
@@ -288,16 +418,42 @@ export function RecipeImportTextModal({
                                                         <span className="font-bold text-slate-800 text-sm">{item.raw.name}</span>
                                                         <Badge variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 font-bold">{item.raw.amount}{item.raw.unit}</Badge>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-500 mt-0.5">
-                                                        {item.status === 'found' ? `Vinculado a: ${item.matched.name}` : '⚠️ Ingrediente não encontrado no banco'}
+                                                    <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                                        {item.status === 'found' ? (
+                                                            <>
+                                                                <span className={`px-1 rounded-[4px] text-[9px] font-bold uppercase ${item.type === 'recipe' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                                    {item.type === 'recipe' ? 'Sub-preparo' : 'Insumo'}
+                                                                </span>
+                                                                Vinculado a: {item.matched.name}
+                                                            </>
+                                                        ) : (
+                                                            '⚠️ Ingrediente não encontrado no banco'
+                                                        )}
                                                     </p>
                                                 </div>
                                             </div>
-                                            {item.status === 'found' && (
+                                            {item.status === 'found' ? (
                                                 <div className="text-right">
-                                                    <p className="text-[10px] text-slate-400 uppercase font-semibold">Custo KG/L</p>
-                                                    <p className="text-xs font-bold text-emerald-600">R$ {item.matched.current_price?.toFixed(2)}</p>
+                                                    <p className="text-[10px] text-slate-400 uppercase font-semibold">{item.type === 'recipe' ? 'Custo Total' : 'Custo KG/L'}</p>
+                                                    <p className={`text-xs font-bold ${item.type === 'recipe' ? 'text-purple-600' : 'text-emerald-600'}`}>
+                                                        R$ {(item.type === 'recipe' ? item.matched.total_cost : item.matched.current_price)?.toFixed(2)}
+                                                    </p>
                                                 </div>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="border-orange-300 text-orange-700 hover:bg-orange-100 hover:text-orange-800 shrink-0"
+                                                    onClick={() => handleQuickRegister(item, idx)}
+                                                    disabled={registeringIdx === idx}
+                                                >
+                                                    {registeringIdx === idx ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                                    ) : (
+                                                        <Plus className="h-3.5 w-3.5 mr-1" />
+                                                    )}
+                                                    Cadastrar
+                                                </Button>
                                             )}
                                         </div>
                                     ))}
