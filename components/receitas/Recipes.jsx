@@ -26,7 +26,8 @@ import {
   Square,
   X,
   Loader2,
-  Plus
+  Plus,
+  ChefHat
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,7 +55,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "@/components/ui/use-toast"
-import RecipeSettingsDialog from "@/components/receitas/RecipeSettingsDialog";
 import RecipeFormModal from "@/components/receitas/RecipeFormModal";
 import { APP_CONSTANTS } from "@/lib/constants";
 
@@ -665,13 +665,8 @@ export default function Recipes() {
       rootsByType[type].push(root);
     });
 
-    const orderedTypes = ['produtos', 'receitas', 'ingredientes'];
-    const typeLabels = { 'produtos': 'PRODUTOS', 'receitas': 'RECEITAS', 'ingredientes': 'INGREDIENTES' };
-    const presentTypes = Object.keys(rootsByType);
-    const sortedTypes = [
-      ...orderedTypes.filter(t => presentTypes.includes(t)),
-      ...presentTypes.filter(t => !orderedTypes.includes(t))
-    ];
+    const activeTypeNormalized = normalizeType(activeType);
+    const sortedTypes = [activeTypeNormalized];
 
     const buildDescendants = (cats, parentId, prefix) => {
       let list = [];
@@ -684,8 +679,10 @@ export default function Recipes() {
       return list;
     };
 
+    const typeLabels = { 'produtos': 'PRODUTOS', 'receitas': 'RECEITAS', 'ingredientes': 'INGREDIENTES' };
+
     const groups = sortedTypes.map(type => {
-      const typeRoots = rootsByType[type];
+      const typeRoots = rootsByType[type] || [];
       const typeLabel = typeLabels[type] || type.toUpperCase();
       let typeItems = [];
       typeRoots.forEach(root => {
@@ -787,34 +784,7 @@ export default function Recipes() {
 
           <div className="mb-6 space-y-4">
 
-            {/* Header com Configuração */}
-            <div className="flex justify-between items-center mb-2">
-              {visibleCategoryTypes.length > 0 && (
-                <Tabs value={activeType} onValueChange={setActiveType} className="w-full max-w-3xl">
-                  <TabsList className="bg-gray-100 p-1 flex-wrap h-auto">
-                    {visibleCategoryTypes.map(type => (
-                      <TabsTrigger
-                        key={type.id}
-                        value={type.value}
-                        className="min-w-[100px]"
-                      >
-                        {type.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              )}
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsSettingsOpen(true)}
-                title="Configurar Abas"
-                className="ml-2"
-              >
-                <Settings className="h-4 w-4 text-gray-600" />
-              </Button>
-            </div>
+            {/* As abas de configuração de tipo e engrenagem foram removidas pois a tela agora é fixa para Receitas */}
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
@@ -992,13 +962,28 @@ export default function Recipes() {
           )}
 
           <div className={cn(
-            "gap-4",
-            viewMode === "grid"
+            filteredRecipes.length > 0 ? "gap-4" : "",
+            filteredRecipes.length > 0 && viewMode === "grid"
               ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
               : "flex flex-col space-y-4"
           )}>
-            {filteredRecipes.map((recipe) => {
-              const isChecked = bulkSelected.has(recipe.id);
+            {filteredRecipes.length === 0 ? (
+              <div className="col-span-full py-20 px-6 text-center bg-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center shadow-sm">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-orange-600">
+                  <ChefHat className="h-8 w-8" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum item cadastrado por aqui</h3>
+                <p className="text-gray-500 max-w-md mx-auto mb-6 leading-relaxed">
+                  Para começar, clique no botão abaixo para criar seu primeiro item. Você definirá o nome e a categoria, e em seguida será direcionado para a Ficha Técnica para adicionar os ingredientes e processos.
+                </p>
+                <Button className="bg-orange-600 hover:bg-orange-700 h-11 px-8 text-sm shadow-sm" onClick={() => setIsNewRecipeModalOpen(true)}>
+                  <Plus className="h-5 w-5 mr-2" />
+                  Criar Primeiro Item
+                </Button>
+              </div>
+            ) : (
+              filteredRecipes.map((recipe) => {
+                const isChecked = bulkSelected.has(recipe.id);
               return (
                 <motion.div
                   key={recipe.id}
@@ -1124,16 +1109,12 @@ export default function Recipes() {
                   </Card>
                 </motion.div>
               );
-            })}
+            })
+            )}
           </div>
         </div>
       </div>
 
-      <RecipeSettingsDialog
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={(newSettings) => setVisibleTypes(newSettings)}
-      />
 
       {/* Modal de Edição Rápida */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

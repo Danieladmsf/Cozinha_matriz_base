@@ -21,7 +21,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ProductFormModal from "./ProductFormModal";
-import ProductSettingsDialog from "./ProductSettingsDialog";
+
 
 export default function ProductsList() {
     const searchParams = useSearchParams();
@@ -114,7 +114,10 @@ export default function ProductsList() {
     useEffect(() => {
         if (fullCategoryTree.length > 0) {
             const cats = fullCategoryTree
-                .filter(cat => cat.type === activeType && cat.active !== false && cat.level === 1)
+                .filter(cat => {
+                    const t = (cat.type || '').toLowerCase();
+                    return (t === 'produtos' || t === 'product' || t === 'products') && cat.active !== false && cat.level === 1;
+                })
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
 
             setProductCategories(cats.map(cat => ({
@@ -210,36 +213,6 @@ export default function ProductsList() {
 
     const getFilteredProducts = () => {
         let filtered = products;
-
-        // 0. Filter by Active Type (The main tab)
-        // Products are associated with exactly ONE category. So we find which ones belong to `activeType`.
-        // If a product has no category, we can show it in the default 'produtos' tab, or 'Todas'
-        const normalizeType = (t) => {
-            const raw = (t || '').toLowerCase().trim();
-            const aliases = {
-                'recipe': 'receitas', 'recipes': 'receitas', 'receita': 'receitas',
-                'product': 'produtos', 'products': 'produtos', 'produto': 'produtos',
-                'ingredient': 'ingredientes', 'ingredients': 'ingredientes', 'ingrediente': 'ingredientes',
-            };
-            return aliases[raw] || raw || 'receitas';
-        };
-
-        const typeCategories = fullCategoryTree.filter(c => normalizeType(c.type) === normalizeType(activeType));
-        const typeCategoryNames = typeCategories.map(c => c.name);
-        const typeCategoryIds = typeCategories.map(c => c.id);
-
-        filtered = filtered.filter(p => {
-            if (!p.category && !p.category_id) {
-                // If it has no category, only show it if we are in the default "produtos" tab.
-                return normalizeType(activeType) === 'produtos';
-            }
-            return (
-                (p.category_id && typeCategoryIds.includes(p.category_id)) ||
-                (p.category && typeCategoryNames.includes(p.category)) ||
-                // if somehow the category name matches activeType directly? not likely, but just in case
-                p.category === activeType
-            );
-        });
 
         if (searchTerm) {
             filtered = filtered.filter(p =>
@@ -344,34 +317,7 @@ export default function ProductsList() {
                     </motion.div>
 
                     <div className="mb-6 space-y-4">
-                        {/* Header com Configuração */}
-                        <div className="flex justify-between items-center mb-2">
-                            {visibleCategoryTypes.length > 0 && (
-                                <Tabs value={activeType} onValueChange={setActiveType} className="w-full max-w-3xl">
-                                    <TabsList className="bg-blue-50 p-1 flex-wrap h-auto">
-                                        {visibleCategoryTypes.map(type => (
-                                            <TabsTrigger
-                                                key={type.id || type.value}
-                                                value={type.value}
-                                                className="min-w-[100px]"
-                                            >
-                                                {type.label || type.value}
-                                            </TabsTrigger>
-                                        ))}
-                                    </TabsList>
-                                </Tabs>
-                            )}
-
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setIsSettingsOpen(true)}
-                                title="Configurar Abas"
-                                className="ml-2"
-                            >
-                                <Settings className="h-4 w-4 text-gray-600" />
-                            </Button>
-                        </div>
+            {/* As abas de configuração de tipo e engrenagem foram removidas pois a tela agora é fixa para Produtos */}
 
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <Tabs defaultValue="all" value={activeCategory} onValueChange={(val) => { setActiveCategory(val); setActiveSubCategory(null); }}>
@@ -619,10 +565,28 @@ export default function ProductsList() {
                                 </motion.div>
                             ))}
                             {filteredProducts.length === 0 && (
-                                <div className="col-span-full p-12 text-center bg-white rounded-lg border border-dashed border-gray-300">
-                                    <Box className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                                    <h3 className="text-lg font-medium text-gray-900">Nenhum produto encontrado</h3>
-                                    <p className="text-gray-500 mt-1">Sua vitrine comercial (SKU) está vazia ou a busca não encontrou resultados.</p>
+                                <div className="col-span-full py-20 px-6 text-center bg-white rounded-xl border border-dashed border-blue-300 flex flex-col items-center justify-center shadow-sm">
+                                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-600">
+                                        <Box className="h-8 w-8" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum produto cadastrado ainda</h3>
+                                    <p className="text-gray-500 max-w-md mx-auto mb-4 leading-relaxed">
+                                        Aqui você monta seus itens comerciais (marmitas, porções, combos) usando as <strong>receitas que você já criou</strong> como base.
+                                    </p>
+                                    <div className="bg-blue-50/70 border border-blue-100 rounded-lg p-4 max-w-lg mx-auto mb-6 text-left space-y-2">
+                                        <p className="text-sm text-blue-700">
+                                            💡 <strong>Como funciona:</strong>
+                                        </p>
+                                        <ul className="text-sm text-blue-700 list-disc list-inside space-y-1 pl-1">
+                                            <li>Crie o produto e vincule uma ou mais <strong>receitas já cadastradas</strong> como componente.</li>
+                                            <li>Precisa complementar? Você também pode adicionar <strong>ingredientes avulsos</strong> (embalagens, molhos extras, etc).</li>
+                                            <li>O custo final é calculado automaticamente com base nas fichas técnicas vinculadas.</li>
+                                        </ul>
+                                    </div>
+                                    <Button className="bg-blue-600 hover:bg-blue-700 h-11 px-8 text-sm shadow-sm" onClick={handleOpenNew}>
+                                        <Plus className="h-5 w-5 mr-2" />
+                                        Criar Primeiro Produto
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -638,11 +602,6 @@ export default function ProductsList() {
                 fullCategoryTree={fullCategoryTree}
             />
 
-            <ProductSettingsDialog
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                onSave={(newSettings) => setVisibleTypes(newSettings)}
-            />
         </div>
     );
 }

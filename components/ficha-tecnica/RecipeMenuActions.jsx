@@ -46,101 +46,11 @@ export function RecipeMenuActions({
         <Card className="bg-white shadow-sm border h-full flex flex-col">
             <CardHeader className="bg-gray-50 border-b border-gray-100 px-6 py-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-base font-medium text-gray-700">Menu</CardTitle>
-
-                <Popover open={isCategorySettingsOpen} onOpenChange={setIsCategorySettingsOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-600">
-                            <Settings className="h-4 w-4" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-4" align="end">
-                        <div className="space-y-4">
-                            <h4 className="font-medium text-sm text-gray-900 border-b pb-2">Configurar Filtros</h4>
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                                {categoryTypes
-                                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                                    .map(catType => (
-                                        <div key={catType.id || catType.value} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`filter-${catType.value}`}
-                                                checked={selectedFilterCategories.includes(catType.value)}
-                                                onCheckedChange={(checked) => {
-                                                    let newCategories = [];
-                                                    if (checked) {
-                                                        newCategories = [...selectedFilterCategories, catType.value];
-                                                    } else {
-                                                        newCategories = selectedFilterCategories.filter(v => v !== catType.value);
-                                                        if (activeCategoryFilter === catType.value) setActiveCategoryFilter('all');
-                                                    }
-
-                                                    setSelectedFilterCategories(newCategories);
-
-                                                    // Atualizar config e salvar (passando newCategories diretamente)
-                                                    updateConfig('filter_categories', newCategories);
-                                                    saveConfiguration(selectedCategoryType, newCategories);
-                                                }}
-                                            />
-                                            <label
-                                                htmlFor={`filter-${catType.value}`}
-                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                            >
-                                                {catType.label}
-                                            </label>
-                                        </div>
-                                    ))
-                                }
-                                {categoryTypes.length === 0 && (
-                                    <p className="text-xs text-gray-500">Nenhuma categoria encontrada.</p>
-                                )}
-                            </div>
-                        </div>
-                    </PopoverContent>
-                </Popover>
             </CardHeader>
 
             <CardContent className="p-4 space-y-3 flex-1">
-                {/* Barra de Busca e Filtros */}
+                {/* Barra de Busca */}
                 <div className="relative search-container flex flex-col gap-2">
-
-                    {/* ABAS FIXAS: Todos / Receitas / Produtos */}
-                    <div className="flex gap-1 overflow-x-auto py-1 px-1 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent mb-1">
-                        <Badge
-                            variant={activeCategoryFilter === 'all' ? "default" : "outline"}
-                            className={cn(
-                                "cursor-pointer whitespace-nowrap px-3 py-1 text-xs",
-                                activeCategoryFilter === 'all'
-                                    ? "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200"
-                                    : "hover:bg-gray-100"
-                            )}
-                            onClick={() => setActiveCategoryFilter('all')}
-                        >
-                            Todos
-                        </Badge>
-                        <Badge
-                            variant={activeCategoryFilter === 'receitas' ? "default" : "outline"}
-                            className={cn(
-                                "cursor-pointer whitespace-nowrap px-3 py-1 text-xs",
-                                activeCategoryFilter === 'receitas'
-                                    ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-                                    : "hover:bg-gray-100 text-gray-600"
-                            )}
-                            onClick={() => setActiveCategoryFilter('receitas')}
-                        >
-                            Receitas
-                        </Badge>
-                        <Badge
-                            variant={activeCategoryFilter === 'produtos' ? "default" : "outline"}
-                            className={cn(
-                                "cursor-pointer whitespace-nowrap px-3 py-1 text-xs",
-                                activeCategoryFilter === 'produtos'
-                                    ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
-                                    : "hover:bg-gray-100 text-gray-600"
-                            )}
-                            onClick={() => setActiveCategoryFilter('produtos')}
-                        >
-                            Produtos
-                        </Badge>
-                    </div>
 
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

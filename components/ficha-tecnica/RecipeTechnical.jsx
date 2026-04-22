@@ -1,6 +1,6 @@
 'use client';
 
-import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { RecipeEngine as RecipeCalculator } from "@/lib/recipe-engine/RecipeEngine";
 
@@ -106,7 +106,6 @@ import RecipeMenuActions from "./RecipeMenuActions";
 import RecipeGeneralInfo from "./RecipeGeneralInfo";
 import RecipeMetricsDashboard from "./RecipeMetricsDashboard";
 import RecipeBook from "./RecipeBook";
-import RecipeSettingsDialog from "@/components/receitas/RecipeSettingsDialog";
 import RecipeFormModal from "@/components/receitas/RecipeFormModal";
 import NutritionalInfo from "@/components/receitas/NutritionalInfo";
 import RecipeEngine from '@/lib/recipe-engine/RecipeEngine';
@@ -692,23 +691,50 @@ export default function RecipeTechnical() {
   // ingredientes a cada alteração, o que impedia a edição manual dos campos.
   // O cálculo agora é feito apenas ao salvar a receita.
 
-  // ==== EFFECT PARA REFRESH DO CACHE DE INGREDIENTES ====
+  // ==== REAL-TIME SYNC FOR INGREDIENTS AND RECIPES ====
   useEffect(() => {
-    // Carregamento passivo para o cache principal
-    const refreshIngredients = async () => {
-      try {
-        await useRecipeZustandStore.getState().refreshIngredientsIfNeeded();
-      } catch (error) {
-        console.error("Falha ao refrescar cache de ingredientes durante o uso da Ficha Técnica.", error);
-        toast({
-          title: "Aviso de Conexão",
-          description: "Falha ao sincronizar o banco de ingredientes atualizado. Você pode estar vendo dados salvos no cache anterior.",
-          variant: "destructive"
-        });
-      }
+    const tenantId = getTenantId();
+    if (!tenantId) return;
+
+    // 1. Ouvinte em tempo real para Insumos (Ingredientes)
+    const ingredientsQuery = query(
+      collection(db, 'tenants', tenantId, 'Ingredient'),
+      where('active', '!=', false)
+    );
+
+    const unsubIngredients = onSnapshot(ingredientsQuery, (snapshot) => {
+      const ingredientsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log(`[Sync] ${ingredientsList.length} ingredientes carregados em tempo real.`);
+      setIngredients(ingredientsList);
+    }, (error) => {
+      console.error("Erro no listener de ingredientes:", error);
+    });
+
+    // 2. Ouvinte em tempo real para Receitas (Sub-preparos)
+    const recipesQuery = query(
+      collection(db, 'tenants', tenantId, 'Recipe'),
+      where('active', '!=', false)
+    );
+
+    const unsubRecipes = onSnapshot(recipesQuery, (snapshot) => {
+      const recipesList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log(`[Sync] ${recipesList.length} receitas carregadas em tempo real.`);
+      setRecipes(recipesList);
+    }, (error) => {
+      console.error("Erro no listener de receitas:", error);
+    });
+
+    return () => {
+      unsubIngredients();
+      unsubRecipes();
     };
-    refreshIngredients();
-  }, [toast]);
+  }, [setIngredients, setRecipes]);
 
   // ==== EFFECT PARA CARREGAR CONFIGURAÇÃO DA I.A. GALO ====
   useEffect(() => {
@@ -749,31 +775,62 @@ export default function RecipeTechnical() {
   const handleImportFromText = (importData) => {
     const { title, ingredients: matchedIngredients, missingItems } = importData;
     
-    // 1. Criar a nova preparação
-    const newPrep = {
-      title: title || `${preparationsData.length + 1}º Etapa: Importada`,
-      ingredients: matchedIngredients.map(ing => {
-        let rawWeight = ing.weight_raw || 0;
-        let cookedWeight = rawWeight;
-        
-        // Verifica o fator de perda de cocção trazido da tabela base
-        if (ing.cooking_loss_pct) {
-           const lossStr = String(ing.cooking_loss_pct).replace(',', '.');
-           const loss = parseFloat(lossStr) || 0;
-           cookedWeight = rawWeight * (1 - (loss / 100));
-        }
+    // Separar ingredientes de sub-preparos
+    const finalIngredients = [];
+    const finalSubComponents = [];
 
+    matchedIngredients.forEach(ing => {
+      // Formata para o padrão visual (XX,XXX)
+      const formatNum = (num) => Number(num).toFixed(3).replace('.', ',');
+
+      if (ing.type === 'recipe') {
+        finalSubComponents.push({
+          recipe_id: ing.recipe_id,
+          name: ing.name,
+          amount: ing.amount || 0,
+          unit: ing.unit || 'Kg',
+          cost: ing.cost || 0,
+          id: ing.id || String(Date.now() + Math.random())
+        });
+      } else {
+        let rawWeight = ing.weight_raw || 0;
+        
+        // Acesso aos dados técnicos (Limpeza e Cocção) que estão aninhados no banco
+        const techData = ing.technical_data || {};
+        
+        // 1. Calcula perda de Limpeza (se houver) -> Define o peso Pré-Cocção
+        const cleanPct = techData.cleaning_loss_pct || ing.cleaning_loss_pct || 0;
+        const cleaningLoss = parseFloat(String(cleanPct).replace(',', '.')) || 0;
+        let preCookingWeight = rawWeight * (1 - (cleaningLoss / 100));
+
+        // 2. Calcula perda de Cocção (se houver) -> Define o peso Pós-Cocção
+        const cookPct = techData.cooking_loss_pct || ing.cooking_loss_pct || 0;
+        const cookingLoss = parseFloat(String(cookPct).replace(',', '.')) || 0;
+        let cookedWeight = preCookingWeight * (1 - (cookingLoss / 100));
+        
         // Formata para o padrão visual (XX,XXX)
         const formatNum = (num) => Number(num).toFixed(3).replace('.', ',');
 
-        return {
+        console.log(`[Import AI] ${ing.name}: Bruto=${rawWeight}, Limpeza=${cleaningLoss}%, Cocção=${cookingLoss}%`);
+
+        finalIngredients.push({
           ...ing,
           id: String(Date.now() + Math.random()),
           weight_raw: rawWeight ? formatNum(rawWeight) : 0,
-          weight_pre_cooking: rawWeight ? formatNum(rawWeight) : 0,
+          weight_pre_cooking: preCookingWeight ? formatNum(preCookingWeight) : 0,
           weight_cooked: cookedWeight ? formatNum(cookedWeight) : 0,
-        };
-      }),
+          // Mantém as referências para o componente de tabela exibir os labels
+          cleaning_loss_pct: cleaningLoss,
+          cooking_loss_pct: cookingLoss,
+          technical_data: techData
+        });
+      }
+    });
+
+    const newPrep = {
+      title: title || `${preparationsData.length + 1}º Etapa: Importada`,
+      ingredients: finalIngredients,
+      sub_components: finalSubComponents,
       processes: ['cooking'],
       instructions: missingItems.length > 0 
         ? `Obs: Itens não encontrados para vincular: ${missingItems.join(', ')}` 
@@ -1193,7 +1250,8 @@ export default function RecipeTechnical() {
           setIngredientModalOpen={setIngredientModalOpen}
           setRecipeModalOpen={setRecipeModalOpen}
           setPackagingModalOpen={setPackagingModalOpen}
-          availableIngredients={availableIngredients}
+          availableIngredients={ingredients}
+          availableRecipes={recipes}
           handleSelectMultipleIngredients={handleSelectMultipleIngredients}
           handleCloseIngredientModal={handleCloseIngredientModal}
           handleClosePackagingModal={handleClosePackagingModal}

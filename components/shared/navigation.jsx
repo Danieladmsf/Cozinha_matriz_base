@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogOut,
   Sparkles,
   User as UserIcon
@@ -27,6 +28,11 @@ export default function SidebarNav({
   handleMouseLeave
 }) {
   const { user, tenantData, signOut } = useTenant();
+  const [openDropdowns, setOpenDropdowns] = React.useState({ 'Ficha Técnica': true });
+
+  const toggleDropdown = (name) => {
+    setOpenDropdowns(prev => ({ ...prev, [name]: !prev[name] }));
+  };
 
   return (
     <aside
@@ -76,12 +82,109 @@ export default function SidebarNav({
         <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 scrollbar-hide">
           <div className="space-y-1">
             {navigation.map((item) => {
-              const isActive = item.href === "/dashboard" 
-                ? currentPageName === "Dashboard"
-                : currentPageName.startsWith(item.href.substring(1));
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              
+              // Verifica se algum subitem está ativo para marcar o pai
+              const isParentActive = hasSubItems && item.subItems.some(sub => 
+                sub.href === "/dashboard" 
+                  ? currentPageName === "Dashboard"
+                  : currentPageName.startsWith(sub.href.substring(1))
+              );
+
+              const isActive = hasSubItems ? isParentActive : (
+                item.href === "/dashboard" 
+                  ? currentPageName === "Dashboard"
+                  : currentPageName.startsWith(item.href.substring(1))
+              );
               
               const isRecipes = item.href === "/receitas";
+              const isOpen = openDropdowns[item.name];
 
+              // Se tiver subItems, renderiza o Accordion
+              if (hasSubItems) {
+                return (
+                  <div key={item.name} className="flex flex-col gap-1">
+                    <button
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md transition-colors",
+                        isActive
+                          ? "text-blue-700 bg-blue-50"
+                          : "text-gray-600 hover:bg-gray-50",
+                        sidebarCollapsed && !isHovering ? "justify-center px-1" : ""
+                      )}
+                      onClick={() => {
+                        if (sidebarCollapsed && !isHovering) {
+                          setSidebarCollapsed(false);
+                          setIsHovering(true);
+                          setOpenDropdowns(prev => ({ ...prev, [item.name]: true }));
+                        } else {
+                          toggleDropdown(item.name);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            isActive ? "text-orange-500" : "text-blue-800"
+                          )}
+                        />
+                        {(!sidebarCollapsed || isHovering) && (
+                          <span className={cn(
+                            "whitespace-nowrap",
+                            isActive ? "text-blue-700" : "text-gray-600"
+                          )}>
+                            {item.name}
+                          </span>
+                        )}
+                      </div>
+                      {(!sidebarCollapsed || isHovering) && (
+                        <ChevronDown 
+                          className={cn(
+                            "h-3.5 w-3.5 transition-transform duration-200",
+                            isOpen ? "rotate-180" : ""
+                          )} 
+                        />
+                      )}
+                    </button>
+
+                    {/* SubItens list */}
+                    {isOpen && (!sidebarCollapsed || isHovering) && (
+                      <div className="flex flex-col gap-1 pl-7 pr-2 mt-1">
+                        {item.subItems.map(subItem => {
+                          const isSubActive = subItem.href === "/dashboard" 
+                            ? currentPageName === "Dashboard"
+                            : currentPageName.startsWith(subItem.href.substring(1));
+                            
+                          return (
+                            <Link
+                              key={subItem.name}
+                              href={subItem.href}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md",
+                                isSubActive
+                                  ? "text-blue-700 bg-blue-50"
+                                  : "text-gray-500 hover:bg-gray-50"
+                              )}
+                              onClick={() => {
+                                if (window.innerWidth >= 1024) {
+                                  setSidebarCollapsed(true);
+                                  setIsHovering(false);
+                                }
+                                setActiveItem(subItem.href);
+                              }}
+                            >
+                              <span className="whitespace-nowrap">{subItem.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Normal Item sem SubItens
               return (
                 <Link
                   key={item.name}
