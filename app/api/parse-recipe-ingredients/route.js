@@ -3,6 +3,10 @@ import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
+// 🔑 Chave mestra global — fallback para qualquer tenant sem chave própria
+const MASTER_ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+
 /**
  * API para extrair ingredientes e quantidades de um texto informal.
  * Transforma: "500gr de farinha, 2 ovos, 300ml de água"
@@ -11,7 +15,11 @@ import Anthropic from '@anthropic-ai/sdk';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { messages, provider, apiKey, baseUrl } = body;
+        const { messages, provider: rawProvider, apiKey: userApiKey, baseUrl } = body;
+
+        // Resolver provider e API key — se não veio key, usar chave mestra com Anthropic
+        const provider = userApiKey ? (rawProvider || 'anthropic') : 'anthropic';
+        const apiKey = userApiKey || MASTER_ANTHROPIC_KEY;
 
         if (!apiKey) {
             return NextResponse.json({ error: 'API Key necessária.' }, { status: 401 });
@@ -80,7 +88,7 @@ REGRAS ESTritas de JSON:
             }));
             
             const msg = await anthropic.messages.create({
-                model: "claude-3-haiku-20240307",
+                model: DEFAULT_ANTHROPIC_MODEL,
                 max_tokens: 1500,
                 system: systemPrompt,
                 messages: chatMessages,

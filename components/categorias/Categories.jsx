@@ -301,9 +301,12 @@ export default function Categories() {
                 let groupsChanged = false;
 
                 const newGroups = (config.category_groups || []).map(group => {
-                  if (group.name === parentCat.name) {
+                  // Match por nome OU por ID do parent embutido no group.id (ex: "group-abc123-timestamp")
+                  const matchesByName = group.name === parentCat.name;
+                  const matchesById = group.id && group.id.includes(dataToSubmit.parent_id);
+                  if (matchesByName || matchesById) {
                     if (!group.items.includes(newCatId)) {
-                      console.log(`   ➕ Adicionando ao grupo '${group.name}'`);
+                      console.log(`   ➕ Adicionando ao grupo '${group.name}' (match: ${matchesByName ? 'nome' : 'id'})`);
                       groupsChanged = true;
                       return { ...group, items: [...group.items, newCatId] };
                     }
@@ -318,11 +321,21 @@ export default function Categories() {
                 }
 
                 if (groupsChanged) {
+                  const updatedConfig = {
+                    ...config,
+                    category_groups: newGroups,
+                    active_categories: newActive
+                  };
                   await MenuConfig.update(config.id, {
                     category_groups: newGroups,
                     active_categories: newActive
                   });
-                  console.log("   ✅ MenuConfig atualizado com sucesso.");
+
+                  // Invalidar cache do localStorage e notificar o cardápio
+                  localStorage.setItem('menuConfig_v2', JSON.stringify(updatedConfig));
+                  window.dispatchEvent(new CustomEvent('menuConfigUpdated', { detail: updatedConfig }));
+
+                  console.log("   ✅ MenuConfig atualizado e cache invalidado com sucesso.");
                   toast({
                     title: "Sincronização Automática",
                     description: "Categoria adicionada ao Cardápio Semanal.",

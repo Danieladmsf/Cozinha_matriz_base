@@ -27,6 +27,10 @@ venv/
 .env.local
 .env.*
 
+# Firebase service account keys (NEVER commit)
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
+
 # IDE
 .vscode/
 .idea/

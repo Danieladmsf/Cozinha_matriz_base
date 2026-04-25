@@ -34,8 +34,10 @@ import {
   Check,
   X,
   RefreshCw,
-  Settings
+  Settings,
+  FileText
 } from "lucide-react";
+import NfeImportModal from "@/components/ingredientes/nfe/NfeImportModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -104,6 +106,7 @@ export default function Ingredients() {
 
   const [activeTab, setActiveTab] = useState("ingredients");
   const [insumoSubTab, setInsumoSubTab] = useState("ingredientes");
+  const [nfeModalOpen, setNfeModalOpen] = useState(false);
 
   // Ler parâmetro tab da URL para manter aba correta após navegação
   useEffect(() => {
@@ -172,6 +175,14 @@ export default function Ingredients() {
             Atualizar
           </Button>
           <Button
+            variant="outline"
+            onClick={() => setNfeModalOpen(true)}
+            className="shadow-sm hover:shadow-md transition-all duration-300 border-blue-200 text-blue-700 hover:border-blue-300 hover:bg-blue-50"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Importar XML (NFe)
+          </Button>
+          <Button
             onClick={() => {
               const type = insumoSubTab === 'embalagens' ? 'embalagem' : 'ingrediente';
               router.push(`/ingredientes/editor?type=${type}`);
@@ -187,12 +198,18 @@ export default function Ingredients() {
         </div>
       </div>
 
+      <NfeImportModal
+        isOpen={nfeModalOpen}
+        onClose={() => setNfeModalOpen(false)}
+        onImported={() => loadIngredients()}
+      />
+
       {/* Tabs principais */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-white p-2 rounded-xl shadow-md border border-gray-100 gap-2">
           <TabsTrigger
             value="ingredients"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg font-medium"
+            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gray-700 data-[state=active]:to-gray-800 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-300 rounded-lg font-medium"
           >
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline">Insumos</span>

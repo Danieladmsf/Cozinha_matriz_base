@@ -14,7 +14,10 @@
       "Bash(/mingw64/bin/jq.exe --version)",
       "Bash(cp \"/c/Users/Administrador/bin/jq.exe\" \"/c/Users/Administrador/Desktop/COZINHA MATRIZ BASE/jq.exe\")",
       "Bash(\"/c/Users/Administrador/Desktop/COZINHA MATRIZ BASE/jq.exe\" --version)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(firebase --version)",
+      "Bash(firebase deploy *)",
+      "Bash(awk '{print $1, $5, $9}')"
     ]
   }
 }

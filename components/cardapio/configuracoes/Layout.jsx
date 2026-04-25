@@ -51,6 +51,38 @@ const LayoutTab = ({
     }
   }, [categoryGroups]);
 
+  // 🔄 Auto-sync: Detectar novas subcategorias na árvore e adicioná-las automaticamente ao grupo correspondente
+  // Isso resolve o bug onde uma nova subcategoria (ex: "Frangos") não aparecia no cardápio sem salvar manualmente
+  React.useEffect(() => {
+    if (!categoryGroups || categoryGroups.length === 0 || !categoryTree || categoryTree.length === 0) return;
+
+    let hasChanges = false;
+    const updatedGroups = categoryGroups.map(group => {
+      // Encontrar a categoria-pai que deu origem a este grupo (pelo nome)
+      const parentCategory = categoryTree.find(c => c.name === group.name);
+      if (!parentCategory) return group;
+
+      // Buscar todos os filhos atuais dessa categoria-pai
+      const currentChildren = categoryTree.filter(c => c.parent_id === parentCategory.id);
+      const currentChildIds = currentChildren.map(c => c.id);
+
+      // Verificar se há filhos novos que não estão no group.items
+      const newChildIds = currentChildIds.filter(id => !group.items.includes(id));
+
+      if (newChildIds.length > 0) {
+        hasChanges = true;
+        console.log(`🔄 [LayoutTab] Auto-sync: Adicionando ${newChildIds.length} nova(s) subcategoria(s) ao grupo "${group.name}":`, newChildIds);
+        return { ...group, items: [...group.items, ...newChildIds] };
+      }
+
+      return group;
+    });
+
+    if (hasChanges) {
+      setCategoryGroups(updatedGroups);
+    }
+  }, [categoryTree, categoryGroups, setCategoryGroups]);
+
   const allFilteredCategories = getFilteredCategories();
 
   // Filtra categorias que já foram usadas como abas (group.name === cat.name ou group contém cat.id)

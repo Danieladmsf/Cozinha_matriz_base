@@ -284,7 +284,7 @@ export async function POST(request) {
       const aiConfigRef = doc(db, basePath, 'settings', 'ai_config');
       await setDoc(aiConfigRef, {
         aiProvider: 'anthropic',
-        apiKey: 'sk-ant-api03-' + 'a5zyLyOcs_tG0EZ8ryWmx71mGra2z2lb5xl9fxG1-C3ZwYn-18JpgKJ3z81jb7f8enZtxngSQt4s7i8xJ-pbDQ-PC-YuwAA',
+        apiKey: '',
         baseUrl: '',
         activeProfileId: null,
         createdAt: now,

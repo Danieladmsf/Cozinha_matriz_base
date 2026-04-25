@@ -17,7 +17,8 @@ import {
   ClipboardList,
   Wrench,
   ShoppingBag,
-  Sparkles
+  Sparkles,
+  Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SidebarNav from "@/components/shared/navigation";
@@ -59,9 +60,14 @@ function AuthenticatedApp({ children }) {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Receitas", href: "/receitas", icon: ChefHat },
-    { name: "Produtos (SKU)", href: "/produtos", icon: ShoppingBag },
-    { name: "Ficha Técnica", href: "/ficha-tecnica", icon: Clipboard },
+    { 
+      name: "Ficha Técnica", 
+      icon: Clipboard,
+      subItems: [
+        { name: "Acervo de Receitas", href: "/receitas" },
+        { name: "Acervo de Produtos", href: "/produtos" }
+      ]
+    },
     { name: "POP's", href: "/ferramentas", icon: Wrench },
     { name: "Ordem de Produção", href: "/cardapio", icon: Utensils },
     { name: "Programação", href: "/programacao", icon: ClipboardList },

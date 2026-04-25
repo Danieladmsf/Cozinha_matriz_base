@@ -3,6 +3,10 @@ import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
+// 🔑 Chave mestra global — fallback para qualquer tenant sem chave própria
+const MASTER_ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+
 /**
  * API para preencher automaticamente o Controle de Qualidade e PCC de uma receita.
  * Recebe o contexto completo (ingredientes, preparo) e retorna:
@@ -11,7 +15,11 @@ import Anthropic from '@anthropic-ai/sdk';
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { recipeContext, provider, apiKey, baseUrl } = body;
+        const { recipeContext, provider: rawProvider, apiKey: userApiKey, baseUrl } = body;
+
+        // Resolver provider e API key — se não veio key, usar chave mestra com Anthropic
+        const provider = userApiKey ? (rawProvider || 'anthropic') : 'anthropic';
+        const apiKey = userApiKey || MASTER_ANTHROPIC_KEY;
 
         if (!apiKey) {
             return NextResponse.json({ error: 'API Key necessária.' }, { status: 401 });
@@ -69,7 +77,7 @@ REGRAS ESTRITAS:
         } else if (provider === 'anthropic') {
             const anthropic = new Anthropic({ apiKey });
             const msg = await anthropic.messages.create({
-                model: "claude-sonnet-4-20250514",
+                model: DEFAULT_ANTHROPIC_MODEL,
                 max_tokens: 1500,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userMessage }],

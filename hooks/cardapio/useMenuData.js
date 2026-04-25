@@ -120,12 +120,65 @@ export const useMenuData = (currentDate) => {
         menuConfig: configData ? 'presente' : 'ausente'
       });
 
+      // 🔄 [AUTO-RECONCILIATION] 
+      // Sincronizar automaticamente grupos (abas) com a árvore de categorias
+      let configWasReconciled = false;
+      const reconciledConfig = configData ? { ...configData } : null;
+
+      if (reconciledConfig && categoriesData) {
+        const groups = reconciledConfig.category_groups || [];
+        const newGroups = groups.map(group => {
+          // Encontrar o parent correspondente (por nome ou ID no group.id)
+          const parentCat = categoriesData.find(c => 
+            c.name === group.name || (group.id && group.id.includes(c.id))
+          );
+
+          if (!parentCat) return group;
+
+          // Pegar filhos biológicos atuais
+          const currentChildren = categoriesData.filter(c => c.parent_id === parentCat.id);
+          const currentChildIds = currentChildren.map(c => c.id);
+
+          // Identificar itens faltantes
+          const missingIds = currentChildIds.filter(id => !group.items.includes(id));
+
+          if (missingIds.length > 0) {
+            console.log(`🔄 [useMenuData] Auto-sync: Adicionando ${missingIds.length} itens ao grupo "${group.name}":`, missingIds);
+            configWasReconciled = true;
+            return { ...group, items: [...group.items, ...missingIds] };
+          }
+          return group;
+        });
+
+        if (configWasReconciled) {
+          reconciledConfig.category_groups = newGroups;
+          // Também garantir que os novos itens estão marcados como ativos por padrão
+          const newActive = { ...(reconciledConfig.active_categories || {}) };
+          newGroups.flatMap(g => g.items).forEach(id => {
+            if (newActive[id] === undefined) newActive[id] = true;
+          });
+          reconciledConfig.active_categories = newActive;
+        }
+      }
+
+      // Se houve reconciliação, persistir no banco e cache
+      if (configWasReconciled && reconciledConfig) {
+        console.log('💾 [useMenuData] Persistindo reconciliação no Firestore e LocalStorage');
+        localStorage.setItem('menuConfig_v2', JSON.stringify(reconciledConfig));
+        MenuConfig.update(reconciledConfig.id, {
+          category_groups: reconciledConfig.category_groups,
+          active_categories: reconciledConfig.active_categories
+        }).catch(e => console.error('Erro ao persistir reconciliação:', e));
+      }
+
+      const finalConfig = reconciledConfig || configData;
+
       // Atualizar estado e cache global
       const newData = {
         categories: categoriesData || [],
         recipes: recipesData || [],
         customers: customersData || [],
-        menuConfig: configData,
+        menuConfig: finalConfig,
         lastLoaded: Date.now()
       };
 
@@ -136,7 +189,7 @@ export const useMenuData = (currentDate) => {
       setCustomers(newData.customers);
       setMenuConfig(newData.menuConfig);
 
-      console.log('✅ [useMenuData] Dados carregados e cache atualizado com sucesso');
+      console.log('✅ [useMenuData] Dados carregados e cache atualizado com sucesso' + (configWasReconciled ? ' (RECONCILIADO)' : ''));
 
       // Notificar outras instâncias
       notifyCacheUpdate('initialData', newData);

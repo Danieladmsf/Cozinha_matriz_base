@@ -3,10 +3,18 @@ import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 
+// 🔑 Chave mestra global — fallback para qualquer tenant sem chave própria
+const MASTER_ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-4-5-20251001';
+
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { provider, apiKey, baseUrl, userInput, ingredientsContext, segment, conversationHistory, currentDraft } = body;
+        const { provider: rawProvider, apiKey: userApiKey, baseUrl, userInput, ingredientsContext, segment, conversationHistory, currentDraft } = body;
+
+        // Resolver provider e API key — se não veio key, usar chave mestra com Anthropic
+        const provider = userApiKey ? (rawProvider || 'anthropic') : 'anthropic';
+        const apiKey = userApiKey || MASTER_ANTHROPIC_KEY;
 
         // Validações básicas
         if (!apiKey) {
@@ -26,7 +34,7 @@ export async function POST(request) {
                 } else if (provider === 'anthropic') {
                     const anthropic = new Anthropic({ apiKey });
                     await anthropic.messages.create({
-                        model: "claude-haiku-4-5-20251001", max_tokens: 10, messages: [{ role: "user", content: testSysPrompt }]
+                        model: DEFAULT_ANTHROPIC_MODEL, max_tokens: 10, messages: [{ role: "user", content: testSysPrompt }]
                     });
                 } else {
                     const openaiConfig = { apiKey };
@@ -454,7 +462,7 @@ Se já disse o que fez, PARE. Não feche com cortesia.
             // da mesma etapa. Marcar com cache_control: "ephemeral" faz a Anthropic cobrar
             // ~10% do preço na 2ª+ chamada dentro de 5min. Economia típica: 70-80% por sessão.
             const response = await anthropic.messages.create({
-                model: "claude-haiku-4-5-20251001",
+                model: DEFAULT_ANTHROPIC_MODEL,
                 max_tokens: 4000,
                 temperature: 0.1,
                 system: [

@@ -28,7 +28,7 @@ export function RecipeGeneralInfo({
         <Card className="bg-white shadow-sm border h-full flex flex-col overflow-hidden">
             <CardHeader className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <CardTitle className="text-lg font-semibold text-gray-700">
-                    Crie uma nova Receita ou Produto
+                    Crie uma nova Ficha Técnica
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6 overflow-y-auto flex-1">

@@ -68,8 +68,7 @@ const IngredientRow = ({
       updateIngredientField(field, formatted);
     }
 
-    // Preenchimento FRONTAL (Frente para trás - "Tab cascade")
-    // SÍNCRONO: para garantir que o React execute junto e o input receba foco já preenchido.
+    // Preenchimento FRONTAL (Frente para trás - "Cascade total")
     const fieldOrder = [
       'weight_frozen',
       'weight_thawed',
@@ -82,6 +81,8 @@ const IngredientRow = ({
     
     const currentFieldIndex = fieldOrder.indexOf(field);
     if (currentFieldIndex >= 0) {
+      let currentValueToPropagate = num; // Acumulador de valor
+      
       for (let i = currentFieldIndex + 1; i < fieldOrder.length; i++) {
         const nextField = fieldOrder[i];
         const nextValue = ingredient[nextField];
@@ -95,10 +96,26 @@ const IngredientRow = ({
         if (nextField === 'weight_portioned' && hasProcess('portioning')) isActiveProcess = true;
 
         if (isActiveProcess) {
-          if (!nextValue || nextValue === '' || parseNumericValue(nextValue) === 0) {
-            onUpdateIngredient(prepIndex, ingredientIndex, nextField, formatted);
+          // Aplica perdas técnicas se o campo for um dos que sofrem perda
+          if (nextField === 'weight_thawed') {
+             const loss = parseNumericValue(ingredient.technical_data?.thawing_loss_pct) || 0;
+             currentValueToPropagate = currentValueToPropagate * (1 - loss / 100);
+          } else if (nextField === 'weight_clean') {
+             const loss = parseNumericValue(ingredient.technical_data?.cleaning_loss_pct) || 0;
+             currentValueToPropagate = currentValueToPropagate * (1 - loss / 100);
+          } else if (nextField === 'weight_cooked') {
+             const loss = parseNumericValue(ingredient.technical_data?.cooking_loss_pct) || 0;
+             currentValueToPropagate = currentValueToPropagate * (1 - loss / 100);
           }
-          break; // O Tab preenche apenas 1 passo adiante.
+
+          // Só sobrescreve se o campo estiver vazio ou zerado
+          if (!nextValue || nextValue === '' || parseNumericValue(nextValue) === 0) {
+            const nextFormatted = currentValueToPropagate.toFixed(3).replace('.', ',');
+            onUpdateIngredient(prepIndex, ingredientIndex, nextField, nextFormatted);
+          } else {
+            // Se o campo já tem valor, paramos o cascade para respeitar a edição manual do usuário
+            break;
+          }
         }
       }
     }

@@ -36,6 +36,7 @@ export function RecipeModalsWrapper({
     setRecipeModalOpen,
     setPackagingModalOpen,
     availableIngredients,
+    availableRecipes,
     handleSelectMultipleIngredients,
     handleCloseIngredientModal,
     handleClosePackagingModal,
@@ -174,6 +175,7 @@ export function RecipeModalsWrapper({
                 onClose={() => setIsImportTextModalOpen(false)}
                 onImport={handleImportFromText}
                 availableIngredients={availableIngredients}
+                availableRecipes={availableRecipes}
                 aiConfig={aiConfig}
             />
         </>
