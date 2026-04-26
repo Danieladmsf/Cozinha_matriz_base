@@ -112,6 +112,8 @@ export default function WeeklyMenuGrid({
               ? items
               : getFilteredItemsForClient(items, category.id, selectedCustomer?.id);
 
+            if (filteredItems.length === 0) return null;
+
             return (
               <div key={category.id} style={{ marginBottom: '8px' }}>
                 <h3 style={{
@@ -124,44 +126,38 @@ export default function WeeklyMenuGrid({
                 }}>{category.name}</h3>
 
                 <div>
-                  {filteredItems.length > 0 ? (
-                    <div>
-                      {filteredItems.map((item, idx) => {
-                        const recipe = recipes.find(r => r.id === item.recipe_id);
-                        if (!recipe) return null;
+                  {filteredItems.map((item, idx) => {
+                    const recipe = recipes.find(r => r.id === item.recipe_id);
+                    if (!recipe) return null;
 
-                        return (
-                          <div key={`${category.id}-${idx}`}>
-                            <div style={{
-                              fontSize: '10px',
-                              marginBottom: '2px',
-                              lineHeight: '1.2'
-                            }}>
-                              {renderFormattedRecipeName(recipe.name)}
-                            </div>
-                            {getRecipeYieldDescription(recipe) && (
-                              <div style={{ fontSize: '8.5px', color: '#666', fontStyle: 'italic', marginBottom: '2px', lineHeight: '1.1' }}>
-                                {getRecipeYieldDescription(recipe)}
-                              </div>
-                            )}
-                            {selectedCustomer?.id === 'all' && getUncheckedClients(item).length > 0 && (
-                              <div style={{
-                                fontSize: '8px',
-                                color: '#d00',
-                                textDecoration: 'line-through',
-                                marginLeft: '2px',
-                                lineHeight: '1.1'
-                              }}>
-                                {getUncheckedClients(item).map(client => client.name).join(', ')}
-                              </div>
-                            )}
+                    return (
+                      <div key={`${category.id}-${idx}`}>
+                        <div style={{
+                          fontSize: '10px',
+                          marginBottom: '2px',
+                          lineHeight: '1.2'
+                        }}>
+                          {renderFormattedRecipeName(recipe.name)}
+                        </div>
+                        {getRecipeYieldDescription(recipe) && (
+                          <div style={{ fontSize: '8.5px', color: '#666', fontStyle: 'italic', marginBottom: '2px', lineHeight: '1.1' }}>
+                            {getRecipeYieldDescription(recipe)}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '10px', color: '#999' }}>-</div>
-                  )}
+                        )}
+                        {selectedCustomer?.id === 'all' && getUncheckedClients(item).length > 0 && (
+                          <div style={{
+                            fontSize: '8px',
+                            color: '#d00',
+                            textDecoration: 'line-through',
+                            marginLeft: '2px',
+                            lineHeight: '1.1'
+                          }}>
+                            {getUncheckedClients(item).map(client => client.name).join(', ')}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
