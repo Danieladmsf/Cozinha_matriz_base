@@ -375,8 +375,9 @@ export default function WeeklyMenuComponent() {
                   <TabsList className="inline-flex h-auto p-1 bg-slate-100/80 rounded-xl justify-start min-w-max">
                     {menuConfig?.category_groups?.length > 0 ? (
                       menuConfig.category_groups.map(group => {
-                        const originalCat = categories.find(c => c.name === group.name);
+                        const originalCat = categories.find(c => c.id === group.sourceCategoryId || c.name === group.name);
                         const groupColor = originalCat ? getCategoryColor(originalCat.id) : "#60a5fa"; // blue-400 fallback
+                        const displayName = (!group.isCustomName && originalCat) ? originalCat.name : group.name;
                         return (
                           <TabsTrigger
                             key={group.id}
@@ -384,7 +385,7 @@ export default function WeeklyMenuComponent() {
                             className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-slate-900 text-slate-600 hover:text-slate-900"
                           >
                             <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: groupColor }} />
-                            {group.name}
+                            {displayName}
                           </TabsTrigger>
                         );
                       })

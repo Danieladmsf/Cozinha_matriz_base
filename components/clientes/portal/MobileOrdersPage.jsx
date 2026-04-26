@@ -2527,21 +2527,25 @@ const MobileOrdersPage = ({ customerId, customerData }) => {
           {menuConfig?.category_groups?.length > 0 && (
             <div className="px-4 py-2 border-t border-gray-100">
               <div className="flex gap-2 overflow-x-auto py-1 justify-center">
-                {menuConfig.category_groups.map(group => (
-                  <Button
-                    key={group.id}
-                    variant={selectedCategoryGroup === group.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategoryGroup(group.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 flex-shrink-0 text-xs px-3 py-1.5",
-                      selectedCategoryGroup === group.id && "bg-blue-600 text-white"
-                    )}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    {group.name}
-                  </Button>
-                ))}
+                {menuConfig.category_groups.map(group => {
+                  const originalCat = categories.find(c => c.id === group.sourceCategoryId || c.name === group.name);
+                  const displayName = (!group.isCustomName && originalCat) ? originalCat.name : group.name;
+                  return (
+                    <Button
+                      key={group.id}
+                      variant={selectedCategoryGroup === group.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategoryGroup(group.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 flex-shrink-0 text-xs px-3 py-1.5",
+                        selectedCategoryGroup === group.id && "bg-blue-600 text-white"
+                      )}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-blue-400" />
+                      {displayName}
+                    </Button>
+                  );
+                })}
               </div>
 
               {/* Separator */}

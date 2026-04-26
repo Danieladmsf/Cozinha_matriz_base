@@ -81,6 +81,13 @@ const LayoutTab = ({
         console.log(`🆙 [LayoutTab] Auto-upgrade: Adicionado sourceCategoryId ao grupo "${currentGroup.name}"`);
       }
 
+      // 🔄 Auto-sync: Sincronizar o nome do grupo com a categoria pai (se não foi renomeado manualmente)
+      if (!currentGroup.isCustomName && currentGroup.name !== parentCategory.name) {
+        currentGroup.name = parentCategory.name;
+        hasChanges = true;
+        console.log(`🔄 [LayoutTab] Auto-sync: Nome do grupo atualizado para "${parentCategory.name}"`);
+      }
+
       // Buscar todos os filhos atuais dessa categoria-pai
       const currentChildren = categoryTree.filter(c => c.parent_id === parentCategory.id);
       const currentChildIds = currentChildren.map(c => c.id);
@@ -273,7 +280,7 @@ const LayoutTab = ({
   const saveGroupName = () => {
     if (editingGroupId && editingName.trim()) {
       const newGroups = categoryGroups.map(g =>
-        g.id === editingGroupId ? { ...g, name: editingName.trim() } : g
+        g.id === editingGroupId ? { ...g, name: editingName.trim(), isCustomName: true } : g
       );
       setCategoryGroups(newGroups);
       setEditingGroupId(null);
