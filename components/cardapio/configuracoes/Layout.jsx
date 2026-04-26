@@ -51,42 +51,50 @@ const LayoutTab = ({
     }
   }, [categoryGroups]);
 
-  // 🔄 Auto-sync: Detectar novas subcategorias na árvore e adicioná-las automaticamente ao grupo correspondente
-  // Isso resolve o bug onde uma nova subcategoria (ex: "Frangos") não aparecia no cardápio sem salvar manualmente
+  // 🔄 Auto-sync e Upgrade de Estrutura: Detectar novas subcategorias e garantir sourceCategoryId
   React.useEffect(() => {
     if (!categoryGroups || categoryGroups.length === 0 || !categoryTree || categoryTree.length === 0) return;
 
     let hasChanges = false;
     const updatedGroups = categoryGroups.map(group => {
+      let currentGroup = { ...group };
+
       // Encontrar a categoria-pai que deu origem a este grupo (pelo ID ou nome)
-      let parentCategory = group.sourceCategoryId 
-        ? categoryTree.find(c => c.id === group.sourceCategoryId)
-        : categoryTree.find(c => c.name === group.name);
+      let parentCategory = currentGroup.sourceCategoryId 
+        ? categoryTree.find(c => c.id === currentGroup.sourceCategoryId)
+        : categoryTree.find(c => c.name === currentGroup.name);
       
       // Fallback de compatibilidade: adivinhar o pai pelo primeiro item do grupo
-      if (!parentCategory && group.items && group.items.length > 0) {
-        const firstChild = categoryTree.find(c => c.id === group.items[0]);
+      if (!parentCategory && currentGroup.items && currentGroup.items.length > 0) {
+        const firstChild = categoryTree.find(c => c.id === currentGroup.items[0]);
         if (firstChild && firstChild.parent_id) {
           parentCategory = categoryTree.find(c => c.id === firstChild.parent_id);
         }
       }
 
-      if (!parentCategory) return group;
+      if (!parentCategory) return currentGroup;
+
+      // 🆙 Auto-upgrade: se o grupo antigo não tinha sourceCategoryId, adiciona agora
+      if (!currentGroup.sourceCategoryId) {
+        currentGroup.sourceCategoryId = parentCategory.id;
+        hasChanges = true;
+        console.log(`🆙 [LayoutTab] Auto-upgrade: Adicionado sourceCategoryId ao grupo "${currentGroup.name}"`);
+      }
 
       // Buscar todos os filhos atuais dessa categoria-pai
       const currentChildren = categoryTree.filter(c => c.parent_id === parentCategory.id);
       const currentChildIds = currentChildren.map(c => c.id);
 
       // Verificar se há filhos novos que não estão no group.items
-      const newChildIds = currentChildIds.filter(id => !group.items.includes(id));
+      const newChildIds = currentChildIds.filter(id => !currentGroup.items.includes(id));
 
       if (newChildIds.length > 0) {
         hasChanges = true;
-        console.log(`🔄 [LayoutTab] Auto-sync: Adicionando ${newChildIds.length} nova(s) subcategoria(s) ao grupo "${group.name}":`, newChildIds);
-        return { ...group, items: [...group.items, ...newChildIds] };
+        console.log(`🔄 [LayoutTab] Auto-sync: Adicionando ${newChildIds.length} nova(s) subcategoria(s) ao grupo "${currentGroup.name}":`, newChildIds);
+        currentGroup.items = [...currentGroup.items, ...newChildIds];
       }
 
-      return group;
+      return currentGroup;
     });
 
     if (hasChanges) {
