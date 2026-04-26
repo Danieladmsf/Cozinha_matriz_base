@@ -58,8 +58,19 @@ const LayoutTab = ({
 
     let hasChanges = false;
     const updatedGroups = categoryGroups.map(group => {
-      // Encontrar a categoria-pai que deu origem a este grupo (pelo nome)
-      const parentCategory = categoryTree.find(c => c.name === group.name);
+      // Encontrar a categoria-pai que deu origem a este grupo (pelo ID ou nome)
+      let parentCategory = group.sourceCategoryId 
+        ? categoryTree.find(c => c.id === group.sourceCategoryId)
+        : categoryTree.find(c => c.name === group.name);
+      
+      // Fallback de compatibilidade: adivinhar o pai pelo primeiro item do grupo
+      if (!parentCategory && group.items && group.items.length > 0) {
+        const firstChild = categoryTree.find(c => c.id === group.items[0]);
+        if (firstChild && firstChild.parent_id) {
+          parentCategory = categoryTree.find(c => c.id === firstChild.parent_id);
+        }
+      }
+
       if (!parentCategory) return group;
 
       // Buscar todos os filhos atuais dessa categoria-pai
@@ -88,10 +99,23 @@ const LayoutTab = ({
   // Filtra categorias que já foram usadas como abas (group.name === cat.name ou group contém cat.id)
   // Para evitar duplicação na lista da direita
   const usedCategoryIds = (categoryGroups || []).flatMap(group => {
-    // Se o grupo foi criado a partir de uma categoria, o ID original pode estar no nome ou items
+    // Verificar primeiro se temos o ID original salvo no grupo
+    if (group.sourceCategoryId) {
+      return [group.sourceCategoryId];
+    }
     // Uma forma simples: verificar se existe uma categoria com o mesmo nome que o grupo
     const matchingCat = allFilteredCategories.find(c => c.name === group.name);
-    return matchingCat ? [matchingCat.id] : [];
+    if (matchingCat) return [matchingCat.id];
+
+    // Fallback de compatibilidade: adivinhar o pai pelo primeiro item do grupo
+    if (group.items && group.items.length > 0) {
+      const firstChild = categoryTree.find(c => c.id === group.items[0]);
+      if (firstChild && firstChild.parent_id) {
+        return [firstChild.parent_id];
+      }
+    }
+
+    return [];
   });
 
   const filteredCategories = allFilteredCategories.filter(cat => !usedCategoryIds.includes(cat.id));
@@ -128,7 +152,8 @@ const LayoutTab = ({
         const newGroup = {
           id: `group-${category.id}-${Date.now()}`,
           name: category.name, // Default to category name
-          items: childrenIds
+          items: childrenIds,
+          sourceCategoryId: category.id // Guardar o ID original para não perder o vínculo se renomear
         };
 
         setCategoryGroups([...(categoryGroups || []), newGroup]);
