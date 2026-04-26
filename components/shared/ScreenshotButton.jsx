@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
-import html2canvas from 'html2canvas';
 
 export default function ScreenshotButton() {
   const [isCapturing, setIsCapturing] = useState(false);
@@ -15,8 +14,6 @@ export default function ScreenshotButton() {
       
       // Salvar os estilos originais para restaurar depois
       const originalStyle = elementToCapture.style.cssText;
-      const originalHeight = elementToCapture.style.height;
-      const originalOverflow = elementToCapture.style.overflow;
       
       // Forçar o elemento a ter sua altura total visível (sem scroll interno)
       elementToCapture.style.height = 'auto';
@@ -34,14 +31,17 @@ export default function ScreenshotButton() {
       // Pequeno delay para a página renderizar com a altura expandida
       await new Promise(r => setTimeout(r, 100));
       
-      const canvas = await html2canvas(elementToCapture, {
-        scale: 2, // Alta qualidade
-        useCORS: true, // Permitir imagens externas
-        allowTaint: true,
-        logging: true,
+      // Import html-to-image dynamically to avoid SSR issues if any, or just use the import
+      const { toPng } = await import('html-to-image');
+      
+      const image = await toPng(elementToCapture, {
+        quality: 1,
         backgroundColor: '#ffffff',
-        windowHeight: elementToCapture.scrollHeight,
-        scrollY: 0
+        pixelRatio: 2,
+        height: elementToCapture.scrollHeight,
+        style: {
+          transform: 'none', // Prevent transform issues
+        }
       });
 
       // Restaurar estilos originais
@@ -49,8 +49,6 @@ export default function ScreenshotButton() {
       if (parentContainer) {
         parentContainer.style.cssText = parentOriginalStyle;
       }
-
-      const image = canvas.toDataURL('image/png');
       
       const link = document.createElement('a');
       link.href = image;
