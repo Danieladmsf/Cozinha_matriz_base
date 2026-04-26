@@ -203,12 +203,50 @@ export function useNutritionCalculator() {
     return portionData;
   };
 
+  // Calcula nutrição de uma lista plana de itens (usado na nova UI)
+  const calculateItemsNutrition = (items, recipes, portionOverrides = {}) => {
+    if (!items || !items.length || !recipes || !recipes.length) {
+      return createEmptyTotals();
+    }
+
+    const totals = createEmptyTotals();
+
+    items.forEach(item => {
+      if (!item?.recipe_id) return;
+      
+      const recipe = recipes.find(r => r.id === item.recipe_id);
+      if (!recipe) return;
+
+      // Usar override, se existir, senão usa o padrão da receita, senão 100g
+      let portionSize = safeNumericValue(recipe.portion_size) || 100;
+      
+      // Override pode vir como string ou number no objeto { [recipe_id]: valor }
+      if (portionOverrides[recipe.id] !== undefined) {
+        portionSize = safeNumericValue(portionOverrides[recipe.id]);
+      }
+      
+      const recipePortionNutrition = calculateRecipeNutritionForPortion(recipe, portionSize);
+      
+      Object.keys(totals).forEach(nutrient => {
+        totals[nutrient] += recipePortionNutrition[nutrient] || 0;
+      });
+    });
+
+    // Arredondar valores finais
+    Object.keys(totals).forEach(key => {
+      totals[key] = parseFloat(totals[key].toFixed(2));
+    });
+
+    return totals;
+  };
+
   return {
     loading,
     error,
     calculateDayNutrition,
     calculateRecipeNutrition: calculateRecipeNutritionForPortion,
     calculateLocationNutrition,
-    calculatePortion
+    calculatePortion,
+    calculateItemsNutrition
   };
 }

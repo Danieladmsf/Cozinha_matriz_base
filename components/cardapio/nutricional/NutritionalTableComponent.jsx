@@ -2,30 +2,28 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Settings } from 'lucide-react';
+import { Loader2, Settings, Users } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MenuHeader from '@/components/shared/MenuHeader';
-import NutritionCalculatorComponent from './NutritionCalculatorComponent';
-// SectionContainer removed to reduce card bloat
-import { nutrientConfig } from '@/components/shared/nutrientConfig';
 import { useMenuData } from '@/hooks/cardapio/useMenuData';
-import { UserNutrientConfig } from '@/app/api/entities';
-import { APP_CONSTANTS } from '@/lib/constants';
-
-// Componente UI separado
-import NutrientConfigDialog from './NutrientConfigDialog';
+import { WeeklyMenu as WeeklyMenuEntity } from "@/app/api/entities";
+import DailyNutritionPanel from './DailyNutritionPanel';
+import { useAvailableDays, DAY_NAMES } from '@/hooks/useAvailableDays';
 
 export default function NutritionalTableComponent() {
   const { toast } = useToast();
+  const availableDays = useAvailableDays();
 
   // Estados principais
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentDayIndex, setCurrentDayIndex] = useState(1);
-  const [selectedNutrients, setSelectedNutrients] = useState({});
-  const [expandedCategories, setExpandedCategories] = useState([]);
-  const [isSelectingNutrients, setIsSelectingNutrients] = useState(false);
-  const [userNutrientConfigId, setUserNutrientConfigId] = useState(null);
+  const [currentDay, setCurrentDay] = useState(availableDays.length > 0 ? availableDays[0] : 1);
+  const [selectedCustomer, setSelectedCustomer] = useState('all');
+  
+  // Estado para armazenar as modificações de porção (overrides)
+  const [portionOverrides, setPortionOverrides] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Hook de dados
   const {
@@ -38,51 +36,23 @@ export default function NutritionalTableComponent() {
     loadWeeklyMenu
   } = useMenuData(currentDate);
 
-  // Carregar configuração de nutrientes do usuário
+  // Sincroniza o currentDay com availableDays do menuConfig
   useEffect(() => {
-    loadUserNutrientConfig();
-  }, []);
-
-  const loadUserNutrientConfig = async () => {
-    try {
-      const mockUserId = APP_CONSTANTS.MOCK_USER_ID;
-      const configs = await UserNutrientConfig.query([
-        { field: 'user_id', operator: '==', value: mockUserId }
-      ]);
-
-      if (configs && configs.length > 0) {
-        const config = configs[0];
-        setUserNutrientConfigId(config.id);
-        setSelectedNutrients(config.selected_nutrients || nutrientConfig.defaultSelected);
-        setExpandedCategories(config.expanded_categories || nutrientConfig.expandedCategories);
-      } else {
-        // Usar configuração padrão
-        setSelectedNutrients(nutrientConfig.defaultSelected);
-        setExpandedCategories(nutrientConfig.expandedCategories);
-        // Criar configuração padrão
-        await createDefaultUserNutrientConfig();
+    if (menuConfig?.available_days && !menuConfig.available_days.includes(currentDay)) {
+      if (menuConfig.available_days.length > 0) {
+        setCurrentDay(menuConfig.available_days[0]);
       }
-    } catch (error) {
-      // Usar configuração padrão em caso de erro
-      setSelectedNutrients(nutrientConfig.defaultSelected);
-      setExpandedCategories(nutrientConfig.expandedCategories);
     }
-  };
+  }, [menuConfig?.available_days, currentDay]);
 
-  const createDefaultUserNutrientConfig = async () => {
-    try {
-      const mockUserId = APP_CONSTANTS.MOCK_USER_ID;
-      const defaultConfig = {
-        user_id: mockUserId,
-        selected_nutrients: nutrientConfig.defaultSelected,
-        expanded_categories: nutrientConfig.expandedCategories
-      };
-
-      const newConfig = await UserNutrientConfig.create(defaultConfig);
-      setUserNutrientConfigId(newConfig.id);
-    } catch (error) {
+  // Carrega os overrides do menu quando ele mudar
+  useEffect(() => {
+    if (weeklyMenu?.portion_overrides) {
+      setPortionOverrides(weeklyMenu.portion_overrides);
+    } else {
+      setPortionOverrides({});
     }
-  };
+  }, [weeklyMenu?.id]); // Depende do ID para recarregar ao trocar de semana
 
   // Handlers de navegação
   const handleDateChange = useCallback((newDate) => {
@@ -90,227 +60,156 @@ export default function NutritionalTableComponent() {
     loadWeeklyMenu(newDate);
   }, [loadWeeklyMenu]);
 
-  const handleWeekNavigation = (direction) => {
-    const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-    setCurrentDate(newDate);
-    loadWeeklyMenu(newDate);
-  };
-
-  // Funções de configuração de nutrientes
-  const toggleNutrient = (nutrientId) => {
-    setSelectedNutrients(prev => ({
+  // Handler para alteração do input de porção
+  const handlePortionChange = (recipeId, newValue) => {
+    // Permite vazio enquanto digita, converte para número ao salvar
+    const val = newValue === '' ? '' : Number(newValue);
+    
+    setPortionOverrides(prev => ({
       ...prev,
-      [nutrientId]: !prev[nutrientId]
+      [currentDay]: {
+        ...(prev[currentDay] || {}),
+        [recipeId]: val
+      }
     }));
   };
 
-  const toggleCategory = (categoryName) => {
-    const nutrients = nutrientConfig.nutrientCategories[categoryName] || [];
-    const allSelected = nutrients.every(id => selectedNutrients[id]);
+  // Salvar overrides no Firestore
+  const handleSaveOverrides = async (day) => {
+    if (!weeklyMenu?.id) {
+      toast({ title: "Erro", description: "Menu semanal não encontrado.", variant: "destructive" });
+      return;
+    }
 
-    setSelectedNutrients(prev => {
-      const newSelected = { ...prev };
-      nutrients.forEach(nutrientId => {
-        newSelected[nutrientId] = !allSelected;
-      });
-      return newSelected;
-    });
-  };
-
-  const saveUserNutrients = async () => {
     try {
-      const mockUserId = APP_CONSTANTS.MOCK_USER_ID;
-      const configData = {
-        user_id: mockUserId,
-        selected_nutrients: selectedNutrients,
-        expanded_categories: expandedCategories
-      };
-
-      if (userNutrientConfigId) {
-        await UserNutrientConfig.update(userNutrientConfigId, configData);
-      } else {
-        const newConfig = await UserNutrientConfig.create(configData);
-        setUserNutrientConfigId(newConfig.id);
+      setIsSaving(true);
+      
+      // Limpa os vazios antes de salvar
+      const cleanOverrides = { ...portionOverrides };
+      if (cleanOverrides[day]) {
+        Object.keys(cleanOverrides[day]).forEach(recipeId => {
+          if (cleanOverrides[day][recipeId] === '' || cleanOverrides[day][recipeId] <= 0) {
+            delete cleanOverrides[day][recipeId];
+          }
+        });
       }
 
-      setIsSelectingNutrients(false);
+      await WeeklyMenuEntity.update(weeklyMenu.id, {
+        portion_overrides: cleanOverrides
+      });
 
       toast({
-        title: "Configuração salva",
-        description: "Suas preferências de nutrientes foram salvas com sucesso.",
+        title: "Pesos Salvos!",
+        description: `As porções de ${DAY_NAMES[day]} foram atualizadas para este cardápio.`,
       });
     } catch (error) {
+      console.error(error);
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar as configurações.",
-        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Houve um problema ao salvar os pesos da porção.",
+        variant: "destructive"
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const resetToDefaults = () => {
-    setSelectedNutrients(nutrientConfig.defaultSelected);
-    setExpandedCategories(nutrientConfig.expandedCategories);
-  };
-
-  // Componente DateSelector
-  const DateSelector = ({ currentDate, onDateChange }) => {
+  if (loading || !categories || !recipes) {
     return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="min-w-[240px] justify-start text-left font-normal">
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {currentDate ? (
-              format(currentDate, "MMMM yyyy", { locale: ptBR })
-            ) : (
-              "Selecione mês/ano"
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
-          <Calendar
-            mode="single"
-            selected={currentDate}
-            onSelect={onDateChange}
-            disabled={(date) =>
-              date > new Date() || date < new Date(2020, 0, 1)
-            }
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
     );
-  };
+  }
 
-  // Renderizar seletor de nutrientes
-  const renderNutrientSelector = () => (
-    <Dialog open={isSelectingNutrients} onOpenChange={setIsSelectingNutrients}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Selecionar Nutrientes por Categoria</DialogTitle>
-          <DialogDescription>
-            Selecione os nutrientes que deseja exibir na tabela nutricional
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {Object.entries(nutrientConfig.nutrientCategories).map(([category, nutrients]) => {
-            const allSelected = nutrients.every(id => selectedNutrients[id]);
-            const someSelected = nutrients.some(id => selectedNutrients[id]);
-
-            return (
-              <div key={category} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected && !allSelected;
-                    }}
-                    onCheckedChange={() => toggleCategory(category)}
-                  />
-                  <label className="text-sm font-medium cursor-pointer" onClick={() => toggleCategory(category)}>
-                    {category}
-                  </label>
-                </div>
-                <div className="ml-6 grid grid-cols-1 gap-2">
-                  {nutrients.map(nutrientId => (
-                    <div key={nutrientId} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedNutrients[nutrientId] || false}
-                        onCheckedChange={() => toggleNutrient(nutrientId)}
-                      />
-                      <label
-                        className="text-sm cursor-pointer"
-                        onClick={() => toggleNutrient(nutrientId)}
-                      >
-                        {nutrientConfig.nutrientNames?.[nutrientId] || nutrientId}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" onClick={resetToDefaults}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Restaurar Padrões
-          </Button>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsSelectingNutrients(false)}>
-              Cancelar
-            </Button>
-
-            <Button onClick={saveUserNutrients}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  // Filtrar clientes ativos
+  const activeCustomers = customers?.filter(c => c.active) || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-6">
         <div className="space-y-6">
+          
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-lg p-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <MenuHeader
               currentDate={currentDate}
               onDateChange={handleDateChange}
               weekRange={menuConfig?.available_days?.some(d => d === 0 || d === 6) ? 'full' : 'workdays'}
-              rightContent={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSelectingNutrients(true)}
-                  className="gap-2 bg-white hover:bg-gray-50 border-gray-300"
-                >
-                  <Settings className="h-4 w-4" />
-                  Configurar Nutrientes
-                </Button>
-              }
             />
           </div>
 
-          {/* Tabela Nutricional Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-green-200 p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Settings className="h-5 w-5 text-green-600" />
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Análise Nutricional</h2>
-                <p className="text-sm text-gray-600">Valores nutricionais detalhados do cardápio semanal</p>
-              </div>
+          {/* Controle e Seletor de Cliente */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                Planejamento Nutricional
+              </h2>
+              <p className="text-sm text-gray-500">Defina os pesos e analise as refeições dia a dia</p>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/50 overflow-hidden shadow-sm">
-              <NutritionCalculatorComponent
-                menu={weeklyMenu}
-                currentDayIndex={currentDayIndex}
-                selectedNutrients={selectedNutrients}
-                expandedCategories={expandedCategories}
-                onDayChange={setCurrentDayIndex}
-              />
+            
+            <div className="w-full md:w-auto flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 whitespace-nowrap">Visualizando Refeição de:</span>
+              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <SelectTrigger className="w-full md:w-[250px] bg-white">
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Clientes (Geral)</SelectItem>
+                  {activeCustomers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          {/* Abas de Dias da Semana */}
+          {weeklyMenu ? (
+            <Tabs 
+              value={currentDay.toString()} 
+              onValueChange={(val) => setCurrentDay(parseInt(val))}
+              className="w-full"
+            >
+              <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-6 overflow-x-auto">
+                <TabsList className="w-full justify-start md:justify-center bg-transparent gap-2 h-auto">
+                  {availableDays.map(day => (
+                    <TabsTrigger 
+                      key={day} 
+                      value={day.toString()}
+                      className="px-4 py-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md transition-all shadow-none"
+                    >
+                      {DAY_NAMES[day]}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              {availableDays.map(day => (
+                <TabsContent key={day} value={day.toString()} className="mt-0 outline-none">
+                  <DailyNutritionPanel 
+                    currentDay={day}
+                    weeklyMenu={weeklyMenu}
+                    recipes={recipes}
+                    selectedCustomer={selectedCustomer}
+                    portionOverrides={portionOverrides[day] || {}}
+                    onPortionChange={handlePortionChange}
+                    onSaveOverrides={handleSaveOverrides}
+                    isSaving={isSaving}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          ) : (
+            <div className="bg-white p-12 text-center rounded-lg shadow-sm border border-gray-200">
+              <p className="text-gray-500 text-lg">Nenhum cardápio criado para esta semana.</p>
+              <p className="text-sm text-gray-400 mt-2">Vá para a aba "Produção Semanal" e crie o cardápio primeiro.</p>
+            </div>
+          )}
+          
         </div>
       </div>
-
-      {/* Dialog de Configuração */}
-      <NutrientConfigDialog
-        isOpen={isSelectingNutrients}
-        onClose={() => setIsSelectingNutrients(false)}
-        selectedNutrients={selectedNutrients}
-        onToggleNutrient={toggleNutrient}
-        onToggleCategory={toggleCategory}
-        onResetToDefaults={resetToDefaults}
-        onSave={saveUserNutrients}
-      />
     </div>
   );
 }
