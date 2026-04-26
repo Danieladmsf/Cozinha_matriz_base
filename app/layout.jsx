@@ -31,6 +31,7 @@ import LoginScreen from "@/components/auth/LoginScreen";
 
 import WelcomeModal from "@/components/shared/WelcomeModal";
 import Paywall from "@/components/auth/Paywall";
+import ScreenshotButton from "@/components/shared/ScreenshotButton";
 
 function _getCurrentPage(pathname) {
   if (pathname === "/") return "Dashboard";
@@ -232,6 +233,7 @@ export default function RootLayout({ children }) {
           </div>
           <Toaster />
           {process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_DISABLE_SPEED_INSIGHTS && <SpeedInsights />}
+          <ScreenshotButton />
         </body>
       </html>
     );
@@ -254,6 +256,7 @@ export default function RootLayout({ children }) {
         </TenantProvider>
         <Toaster />
         <SpeedInsights />
+        <ScreenshotButton />
       </body>
     </html>
   );
