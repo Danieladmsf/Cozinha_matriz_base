@@ -4,34 +4,44 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save, UtensilsCrossed, AlertCircle } from "lucide-react";
 import { renderFormattedRecipeName } from '@/lib/textHelpers';
-import { useNutritionCalculator } from './NutritionCalculator';
 
 export default function DailyNutritionPanel({
   currentDay,
   weeklyMenu,
   recipes,
+  categories,
+  menuConfig,
   selectedCustomer,
   portionOverrides,
   onPortionChange,
   onSaveOverrides,
-  isSaving
+  isSaving,
+  calculateItemsNutrition,
+  calculateRecipeNutrition
 }) {
-  const { calculateItemsNutrition, calculateRecipeNutrition } = useNutritionCalculator();
   const [dayItems, setDayItems] = useState([]);
 
-  // Extrai os itens do cardápio para o dia atual e cliente atual
+  // Extrai os itens do cardápio para o dia atual e cliente atual, mantendo a ordem das abas e categorias
   useEffect(() => {
     let items = [];
-    if (weeklyMenu?.menu_data) {
-      Object.keys(weeklyMenu.menu_data).forEach(mealType => {
+    if (weeklyMenu?.menu_data && menuConfig?.category_groups) {
+      // 1. Percorrer os grupos (abas) definidos no menuConfig (ex: Almoço, Jantar)
+      menuConfig.category_groups.forEach(group => {
+        const mealType = group.id;
         const mealData = weeklyMenu.menu_data[mealType];
+        
         if (typeof mealData !== 'object' || mealType.startsWith('_')) return;
         
         const dayData = mealData?.[currentDay];
         if (dayData && typeof dayData === 'object') {
-          Object.keys(dayData).forEach(categoryId => {
+          // 2. Percorrer as categorias na ordem definida dentro do grupo
+          group.items.forEach(categoryId => {
+            // Verificar se a categoria está ativa
+            if (menuConfig.active_categories && menuConfig.active_categories[categoryId] === false) return;
+            
             const catItems = dayData[categoryId];
             if (Array.isArray(catItems)) {
+              // 3. Adicionar itens na ordem em que estão salvos no array da categoria
               catItems.forEach(item => {
                 if (item.recipe_id) {
                   // Filtra por cliente
@@ -46,7 +56,7 @@ export default function DailyNutritionPanel({
       });
     }
     setDayItems(items);
-  }, [weeklyMenu, currentDay, selectedCustomer]);
+  }, [weeklyMenu, currentDay, selectedCustomer, menuConfig]);
 
   // Calcula totais do dia
   const dayTotals = calculateItemsNutrition(dayItems, recipes, portionOverrides);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NutritionFood } from '@/app/api/entities';
+import { RecipeEngine } from '@/lib/recipe-engine/RecipeEngine';
 
 export function useNutritionCalculator() {
   const [nutritionFoods, setNutritionFoods] = useState([]);
@@ -23,11 +24,15 @@ export function useNutritionCalculator() {
 
   // Função auxiliar para obter valor numérico seguro
   const safeNumericValue = (value) => {
-    if (typeof value === 'string' && (value.trim() === '' || value.toLowerCase() === 'na' || value.toLowerCase() === 'tr')) {
-      return 0;
+    if (typeof value === 'number') return isNaN(value) ? 0 : value;
+    if (typeof value === 'string') {
+      if (value.trim() === '' || value.toLowerCase() === 'na' || value.toLowerCase() === 'tr') {
+        return 0;
+      }
+      const parsed = parseFloat(value.replace(',', '.'));
+      return isNaN(parsed) ? 0 : parsed;
     }
-    const parsed = parseFloat(value);
-    return isNaN(parsed) ? 0 : parsed;
+    return 0;
   };
 
   // Criar objeto padrão de valores nutricionais zerados
@@ -46,7 +51,18 @@ export function useNutritionCalculator() {
 
   // Calcula os valores nutricionais brutos de uma receita
   const calculateRecipeRawTotals = (recipe) => {
-    if (!recipe?.ingredients || !nutritionFoods.length) {
+    // Flatten preparations ingredients
+    let allIngredients = [];
+    if (recipe?.preparations) {
+      recipe.preparations.forEach(prep => {
+        if (prep.ingredients) {
+          allIngredients = [...allIngredients, ...prep.ingredients];
+        }
+      });
+    }
+
+    if (!allIngredients.length || !nutritionFoods.length) {
+      console.log(`[Nutrition Debug] Receita ${recipe?.name} falhou. allIngredients:`, allIngredients.length, 'nutritionFoods length:', nutritionFoods.length);
       return { totals: createEmptyTotals(), totalWeightInGrams: 0 };
     }
 
@@ -55,19 +71,24 @@ export function useNutritionCalculator() {
     let totalWeightInGrams = 0;
 
     // Somar contribuição de cada ingrediente
-    recipe.ingredients.forEach(ingredient => {
+    allIngredients.forEach(ingredient => {
+      console.log(`[Nutrition Debug] Investigando ingrediente:`, ingredient);
+      
       // Buscar dados nutricionais do ingrediente
       const nutritionData = nutritionFoods.find(food => 
         food.taco_id === ingredient.taco_id || 
-        food.id === ingredient.taco_id
+        food.id === ingredient.taco_id ||
+        food.id === ingredient.chosen_taco_id
       );
 
-      if (!nutritionData) {return;
+      if (!nutritionData) {
+        console.log(`[Nutrition Debug] Receita ${recipe.name} - Ingrediente taco_id ${ingredient.taco_id} NAO ENCONTRADO na tabela nutricional.`);
+        return;
       }
 
-      // Converter quantidade para gramas
-      let quantityInGrams = safeNumericValue(ingredient.quantity);
-      if (ingredient.unit === 'kg') {
+      // Converter quantidade para gramas usando o motor da receita
+      let quantityInGrams = RecipeEngine.getFinalWeight(ingredient);
+      if ((ingredient.unit || '').toLowerCase() === 'kg' || (ingredient.unit || '') === '') {
         quantityInGrams *= 1000;
       }
 
@@ -83,6 +104,8 @@ export function useNutritionCalculator() {
         }
       });
     });
+    
+    console.log(`[Nutrition Debug] Receita ${recipe.name} - Peso total em gramas:`, totalWeightInGrams);
     return { totals, totalWeightInGrams };
   };
 
@@ -90,13 +113,17 @@ export function useNutritionCalculator() {
   const calculateRecipeNutritionForPortion = (recipe, portionSize) => {
     const portionSizeInGrams = safeNumericValue(portionSize);
     
-    if (portionSizeInGrams <= 0) {return createEmptyTotals();
+    if (portionSizeInGrams <= 0) {
+      console.log(`[Nutrition Debug] Receita ${recipe?.name} - portionSize inválido:`, portionSize);
+      return createEmptyTotals();
     }
 
     // Obter valores brutos da receita
     const { totals: rawTotals, totalWeightInGrams } = calculateRecipeRawTotals(recipe);
     
-    if (totalWeightInGrams <= 0) {return createEmptyTotals();
+    if (totalWeightInGrams <= 0) {
+      console.log(`[Nutrition Debug] Receita ${recipe?.name} - totalWeight <= 0. Ignorando.`);
+      return createEmptyTotals();
     }
 
     // Calcular valores para a porção
