@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import admin from 'firebase-admin';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 // Tenant da conta de apresentação que serve como "matriz de fábrica".
 // Toda nova conta recebe uma cópia exata destas coleções (insumos com
 // preço, TACO vinculada, fornecedores reais, etc).

@@ -12,14 +12,17 @@
  * Requer GOOGLE_APPLICATION_CREDENTIALS apontando para o service
  * account (já configurado em .env.local).
  */
-import 'dotenv/config';
 import admin from 'firebase-admin';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
+import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+dotenv.config();
 
 const FACTORY_TENANT_ID = 'tenant_BmF1PNNemZaRdwNpsrWZrLoL8C62';
 const COLLECTIONS = [
