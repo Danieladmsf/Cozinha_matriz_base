@@ -25,7 +25,9 @@ export default function SidebarNav({
   setIsHovering,
   setActiveItem,
   handleMouseEnter,
-  handleMouseLeave
+  handleMouseLeave,
+  sidebarOpen,
+  setSidebarOpen
 }) {
   const { user, tenantData, signOut } = useTenant();
   const [openDropdowns, setOpenDropdowns] = React.useState({ 'Ficha Técnica': true });
@@ -39,7 +41,10 @@ export default function SidebarNav({
       className={cn(
         "fixed top-0 left-0 z-50 h-full bg-white border-r shadow-sm transition-all duration-200",
         "lg:relative",
-        sidebarCollapsed && !isHovering ? "lg:w-16" : "w-52"
+        sidebarCollapsed && !isHovering ? "lg:w-16" : "w-52",
+        // Mobile: esconde por padrão, mostra quando sidebarOpen
+        sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        "lg:translate-x-0" // Desktop: sempre visível
       )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -170,6 +175,8 @@ export default function SidebarNav({
                                 if (window.innerWidth >= 1024) {
                                   setSidebarCollapsed(true);
                                   setIsHovering(false);
+                                } else {
+                                  setSidebarOpen?.(false);
                                 }
                                 setActiveItem(subItem.href);
                               }}
@@ -200,6 +207,8 @@ export default function SidebarNav({
                     if (window.innerWidth >= 1024) {
                       setSidebarCollapsed(true);
                       setIsHovering(false);
+                    } else {
+                      setSidebarOpen?.(false);
                     }
                     setActiveItem(item.href);
                   }}

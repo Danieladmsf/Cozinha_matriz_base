@@ -187,6 +187,8 @@ function AuthenticatedApp({ children }) {
         setActiveItem={setActiveItem}
         handleMouseEnter={handleMouseEnter}
         handleMouseLeave={handleMouseLeave}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible">
