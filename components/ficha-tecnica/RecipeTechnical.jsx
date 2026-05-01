@@ -199,6 +199,15 @@ export default function RecipeTechnical() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editorCommand, setEditorCommand] = useState(null);
 
+  // Detecta mobile para ajustar zoom
+  const [isMobileView, setIsMobileView] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const {
     handleDropPop,
     handleEditPop,
@@ -1069,28 +1078,28 @@ export default function RecipeTechnical() {
   // ==== RENDER PRINCIPAL ====
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 p-2 md:p-4" style={{ zoom: '80%' }}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 p-2 md:p-4" style={{ zoom: isMobileView ? '100%' : '80%' }}>
       <div className="max-w-[1600px] ml-0 space-y-6">
 
         {/* Header e Voltar */}
-        <div className="flex items-center gap-4 mb-4 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-4 print:hidden">
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.back()}
-            className="flex items-center gap-1 text-gray-600 hover:text-gray-900 border-gray-300 hover:bg-gray-100 h-9"
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-900 border-gray-300 hover:bg-gray-100 h-8 md:h-9 text-xs md:text-sm"
           >
             <ChevronLeft className="h-4 w-4" />
-            Voltar
+            <span className="hidden md:inline">Voltar</span>
           </Button>
 
           {/* Título Principal */}
-          <div className="flex flex-1 items-center justify-between">
-            <div className="flex items-center gap-2 text-blue-600 flex-nowrap">
-              <ClipboardList className="h-6 w-6 flex-shrink-0" />
-              <h1 className="text-2xl font-bold whitespace-nowrap">Ficha Técnica</h1>
+          <div className="flex flex-1 items-center justify-between min-w-0">
+            <div className="flex items-center gap-2 text-blue-600 flex-nowrap min-w-0">
+              <ClipboardList className="h-5 w-5 md:h-6 md:w-6 flex-shrink-0" />
+              <h1 className="text-lg md:text-2xl font-bold whitespace-nowrap truncate">Ficha Técnica</h1>
               {isDirty && (
-                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded flex-shrink-0">
                   Não salvo
                 </span>
               )}
