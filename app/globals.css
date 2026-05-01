@@ -42,6 +42,17 @@
   transition: opacity 0.2s ease;
 }
 
+/* Ficha Técnica: zoom 80% no desktop, 100% no mobile */
+.ficha-tecnica-container {
+  zoom: 80%;
+}
+
+@media (max-width: 767px) {
+  .ficha-tecnica-container {
+    zoom: 100%;
+  }
+}
+
 @layer base {
 
   html,

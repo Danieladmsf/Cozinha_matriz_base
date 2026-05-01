@@ -199,15 +199,6 @@ export default function RecipeTechnical() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editorCommand, setEditorCommand] = useState(null);
 
-  // Detecta mobile para ajustar zoom
-  const [isMobileView, setIsMobileView] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   const {
     handleDropPop,
     handleEditPop,
@@ -1078,7 +1069,7 @@ export default function RecipeTechnical() {
   // ==== RENDER PRINCIPAL ====
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 p-2 md:p-4" style={{ zoom: isMobileView ? '100%' : '80%' }}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100 p-2 md:p-4 ficha-tecnica-container">
       <div className="max-w-[1600px] ml-0 space-y-6">
 
         {/* Header e Voltar */}
